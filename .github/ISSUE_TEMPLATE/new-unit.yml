@@ -1,0 +1,87 @@
+name: 新單元
+description: 開一個新的教學單元，我會先做教學模擬草稿給你審。
+title: "[單元] "
+labels: ["階段:需求"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        填完送出後，在 Claude Code 跟我說「處理 issue #編號」。我會做模擬草稿，推到網站的 drafts/，再留言附上網址和審查清單。
+        有現成的教案、學習單或圖片，可以直接拖進「參考資料」欄位。
+
+  - type: input
+    id: title
+    attributes:
+      label: 單元名稱
+      placeholder: 例如：全反射與應用
+    validations:
+      required: true
+
+  - type: dropdown
+    id: subject
+    attributes:
+      label: 科目
+      options:
+        - 高中物理
+        - 國中理化
+        - 國中地科
+    validations:
+      required: true
+
+  - type: input
+    id: grade
+    attributes:
+      label: 年級
+      placeholder: 例如：高中三年級
+    validations:
+      required: true
+
+  - type: input
+    id: time
+    attributes:
+      label: 教學時間（分鐘）
+      value: "50"
+    validations:
+      required: true
+
+  - type: textarea
+    id: phenomenon
+    attributes:
+      label: 想讓學生看到的現象
+      description: 用講的或畫的難以呈現、需要隨時間變化才看得懂的地方，最適合做成模擬。
+      placeholder: 例如：入射角逐漸變大時，折射光越來越貼近界面，超過臨界角後完全消失。
+    validations:
+      required: true
+
+  - type: textarea
+    id: variables
+    attributes:
+      label: 學生要能調整的變因
+      placeholder: 例如：入射角、兩種介質的折射率
+    validations:
+      required: true
+
+  - type: textarea
+    id: misconceptions
+    attributes:
+      label: 常見迷思
+      placeholder: 例如：以為光從空氣進入水裡也會全反射
+    validations:
+      required: false
+
+  - type: textarea
+    id: curriculum
+    attributes:
+      label: 課綱條目
+      description: 可以留空，我會從課綱對照查，再請你確認。
+      placeholder: 例如：PKa-Va-11
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: 參考資料
+      description: 現成的教案、學習單、影片或網站。檔案可以直接拖進來。
+    validations:
+      required: false

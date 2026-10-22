@@ -1,0 +1,9 @@
+# 開發文件：不公開，只留在本機
+dev/
+design/**/*.md
+
+# 本機設定與素材
+.claude/
+*.docx
+簡諧運動投影與匹配-v4.html
+Phy-ch/

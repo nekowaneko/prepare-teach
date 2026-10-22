@@ -1,0 +1,358 @@
+name: 學習單建議
+description: 模擬審過之後，用這張表逐題告訴我學習單要怎麼設計。
+title: "[學習單建議] "
+labels: ["類型:學習單建議"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        一題填一個 STEP，最多 6 題；用不到的 STEP 把「目的」選「（不用）」，其他欄留空。
+        題型說明：自由作答＝學生寫一段話；選擇填空＝句子裡挖空讓學生選；動手任務＝學生在模擬上操作，由模擬自動判定是否完成。
+
+  - type: input
+    id: unit-issue
+    attributes:
+      label: 單元 issue 編號
+      placeholder: 例如：#12
+    validations:
+      required: true
+
+  - type: textarea
+    id: goals
+    attributes:
+      label: 學習目標
+      description: 認知、情意、技能各一句即可，會放進教案。
+    validations:
+      required: true
+
+  - type: textarea
+    id: flow
+    attributes:
+      label: 課堂安排
+      description: 準備、發展、綜合活動大概各做什麼、各幾分鐘。可以只寫重點。
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: "### STEP 1"
+
+  - type: dropdown
+    id: s1-purpose
+    attributes:
+      label: STEP 1 目的
+      options:
+        - 觀察
+        - 預測
+        - 動手操作
+        - 觀察細節
+        - 歸納
+        - 應用或延伸
+        - 心得
+    validations:
+      required: true
+
+  - type: dropdown
+    id: s1-kind
+    attributes:
+      label: STEP 1 題型
+      options:
+        - 自由作答
+        - 選擇填空
+        - 動手任務
+    validations:
+      required: false
+
+  - type: textarea
+    id: s1-task
+    attributes:
+      label: STEP 1 學生要做或看到的事
+    validations:
+      required: true
+
+  - type: textarea
+    id: s1-answer
+    attributes:
+      label: STEP 1 期望的答案或完成條件
+      description: 選擇填空請寫出正確選項；動手任務請寫成功的條件。
+    validations:
+      required: false
+
+  - type: input
+    id: s1-board
+    attributes:
+      label: STEP 1 板書想法（可空）
+      description: 投影時白板上要出現的一行字；我會照板書語法排好再給你審。
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: "### STEP 2"
+
+  - type: dropdown
+    id: s2-purpose
+    attributes:
+      label: STEP 2 目的
+      options:
+        - （不用）
+        - 觀察
+        - 預測
+        - 動手操作
+        - 觀察細節
+        - 歸納
+        - 應用或延伸
+        - 心得
+    validations:
+      required: false
+
+  - type: dropdown
+    id: s2-kind
+    attributes:
+      label: STEP 2 題型
+      options:
+        - 自由作答
+        - 選擇填空
+        - 動手任務
+    validations:
+      required: false
+
+  - type: textarea
+    id: s2-task
+    attributes:
+      label: STEP 2 學生要做或看到的事
+    validations:
+      required: false
+
+  - type: textarea
+    id: s2-answer
+    attributes:
+      label: STEP 2 期望的答案或完成條件
+      description: 選擇填空請寫出正確選項；動手任務請寫成功的條件。
+    validations:
+      required: false
+
+  - type: input
+    id: s2-board
+    attributes:
+      label: STEP 2 板書想法（可空）
+      description: 投影時白板上要出現的一行字；我會照板書語法排好再給你審。
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: "### STEP 3"
+
+  - type: dropdown
+    id: s3-purpose
+    attributes:
+      label: STEP 3 目的
+      options:
+        - （不用）
+        - 觀察
+        - 預測
+        - 動手操作
+        - 觀察細節
+        - 歸納
+        - 應用或延伸
+        - 心得
+    validations:
+      required: false
+
+  - type: dropdown
+    id: s3-kind
+    attributes:
+      label: STEP 3 題型
+      options:
+        - 自由作答
+        - 選擇填空
+        - 動手任務
+    validations:
+      required: false
+
+  - type: textarea
+    id: s3-task
+    attributes:
+      label: STEP 3 學生要做或看到的事
+    validations:
+      required: false
+
+  - type: textarea
+    id: s3-answer
+    attributes:
+      label: STEP 3 期望的答案或完成條件
+      description: 選擇填空請寫出正確選項；動手任務請寫成功的條件。
+    validations:
+      required: false
+
+  - type: input
+    id: s3-board
+    attributes:
+      label: STEP 3 板書想法（可空）
+      description: 投影時白板上要出現的一行字；我會照板書語法排好再給你審。
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: "### STEP 4"
+
+  - type: dropdown
+    id: s4-purpose
+    attributes:
+      label: STEP 4 目的
+      options:
+        - （不用）
+        - 觀察
+        - 預測
+        - 動手操作
+        - 觀察細節
+        - 歸納
+        - 應用或延伸
+        - 心得
+    validations:
+      required: false
+
+  - type: dropdown
+    id: s4-kind
+    attributes:
+      label: STEP 4 題型
+      options:
+        - 自由作答
+        - 選擇填空
+        - 動手任務
+    validations:
+      required: false
+
+  - type: textarea
+    id: s4-task
+    attributes:
+      label: STEP 4 學生要做或看到的事
+    validations:
+      required: false
+
+  - type: textarea
+    id: s4-answer
+    attributes:
+      label: STEP 4 期望的答案或完成條件
+      description: 選擇填空請寫出正確選項；動手任務請寫成功的條件。
+    validations:
+      required: false
+
+  - type: input
+    id: s4-board
+    attributes:
+      label: STEP 4 板書想法（可空）
+      description: 投影時白板上要出現的一行字；我會照板書語法排好再給你審。
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: "### STEP 5"
+
+  - type: dropdown
+    id: s5-purpose
+    attributes:
+      label: STEP 5 目的
+      options:
+        - （不用）
+        - 觀察
+        - 預測
+        - 動手操作
+        - 觀察細節
+        - 歸納
+        - 應用或延伸
+        - 心得
+    validations:
+      required: false
+
+  - type: dropdown
+    id: s5-kind
+    attributes:
+      label: STEP 5 題型
+      options:
+        - 自由作答
+        - 選擇填空
+        - 動手任務
+    validations:
+      required: false
+
+  - type: textarea
+    id: s5-task
+    attributes:
+      label: STEP 5 學生要做或看到的事
+    validations:
+      required: false
+
+  - type: textarea
+    id: s5-answer
+    attributes:
+      label: STEP 5 期望的答案或完成條件
+      description: 選擇填空請寫出正確選項；動手任務請寫成功的條件。
+    validations:
+      required: false
+
+  - type: input
+    id: s5-board
+    attributes:
+      label: STEP 5 板書想法（可空）
+      description: 投影時白板上要出現的一行字；我會照板書語法排好再給你審。
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: "### STEP 6"
+
+  - type: dropdown
+    id: s6-purpose
+    attributes:
+      label: STEP 6 目的
+      options:
+        - （不用）
+        - 觀察
+        - 預測
+        - 動手操作
+        - 觀察細節
+        - 歸納
+        - 應用或延伸
+        - 心得
+    validations:
+      required: false
+
+  - type: dropdown
+    id: s6-kind
+    attributes:
+      label: STEP 6 題型
+      options:
+        - 自由作答
+        - 選擇填空
+        - 動手任務
+    validations:
+      required: false
+
+  - type: textarea
+    id: s6-task
+    attributes:
+      label: STEP 6 學生要做或看到的事
+    validations:
+      required: false
+
+  - type: textarea
+    id: s6-answer
+    attributes:
+      label: STEP 6 期望的答案或完成條件
+      description: 選擇填空請寫出正確選項；動手任務請寫成功的條件。
+    validations:
+      required: false
+
+  - type: input
+    id: s6-board
+    attributes:
+      label: STEP 6 板書想法（可空）
+      description: 投影時白板上要出現的一行字；我會照板書語法排好再給你審。
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: 其他要求
+      placeholder: 例如：最後一題要連到隱身衣的問題；用語要配合康軒課本。
+    validations:
+      required: false

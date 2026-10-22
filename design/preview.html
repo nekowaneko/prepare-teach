@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>暖石板琥珀 元件範本</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  .page { max-width: 720px; margin: 0 auto; padding: var(--space-6) var(--space-4); display: grid; gap: var(--space-6); }
+  .section-title { margin: 0 0 var(--space-2); color: var(--ink-muted); }
+  .sl-row { padding: 0; }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <!-- 主題切換：只是預覽用，正式專案可省略 -->
+  <div class="sl-row">
+    <button class="sl-btn sl-btn-secondary" id="themeBtn">切換深色</button>
+  </div>
+
+  <!-- 按鈕：每頁最多一個 primary -->
+  <section>
+    <h2 class="sl-text-label section-title">Button</h2>
+    <div class="sl-row">
+      <button class="sl-btn sl-btn-primary">開始</button>
+      <button class="sl-btn sl-btn-secondary">稍後再說</button>
+      <button class="sl-btn sl-btn-slate">查看紀錄</button>
+    </div>
+  </section>
+
+  <!-- 標籤：一定附文字 -->
+  <section>
+    <h2 class="sl-text-label section-title">Badge</h2>
+    <div class="sl-row">
+      <span class="sl-badge sl-badge-amber">進行中</span>
+      <span class="sl-badge sl-badge-success">已完成</span>
+      <span class="sl-badge sl-badge-danger">逾期</span>
+      <span class="sl-badge">草稿</span>
+    </div>
+  </section>
+
+  <!-- 便當格卡片：外層 .sl-bento，重點格跨兩欄 -->
+  <section>
+    <h2 class="sl-text-label section-title">Card（便當格）</h2>
+    <div class="sl-bento" style="max-width: 360px;">
+      <div class="sl-card" style="grid-column: span 2;">
+        <div class="sl-card-label">完成率</div>
+        <div class="sl-card-value">82%</div>
+        <div class="sl-progress-track" role="progressbar" aria-valuenow="82" aria-valuemin="0" aria-valuemax="100" aria-label="完成率" style="margin-top: 8px;">
+          <div class="sl-progress-fill" style="width: 82%;"></div>
+        </div>
+      </div>
+      <div class="sl-card">
+        <div class="sl-card-label">待審</div>
+        <div class="sl-card-value">3</div>
+      </div>
+      <div class="sl-card sl-card-slate">
+        <div class="sl-card-label">本週新增</div>
+        <div class="sl-card-value">+5</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 進度條：細條樣式 -->
+  <section>
+    <h2 class="sl-text-label section-title">ProgressBar</h2>
+    <div style="max-width: 360px; display: grid; gap: var(--space-4);">
+      <div class="sl-progress">
+        <div class="sl-progress-head"><span>本週完成率</span><span class="sl-progress-num">82%</span></div>
+        <div class="sl-progress-track" role="progressbar" aria-valuenow="82" aria-valuemin="0" aria-valuemax="100" aria-label="本週完成率">
+          <div class="sl-progress-fill" style="width: 82%;"></div>
+        </div>
+      </div>
+      <div class="sl-progress">
+        <div class="sl-progress-head"><span>學習單批改</span><span class="sl-progress-num">35%</span></div>
+        <div class="sl-progress-track" role="progressbar" aria-valuenow="35" aria-valuemin="0" aria-valuemax="100" aria-label="學習單批改">
+          <div class="sl-progress-fill" style="width: 35%;"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 字級 -->
+  <section>
+    <h2 class="sl-text-label section-title">字級</h2>
+    <div class="sl-text-display">本週概覽</div>
+    <div class="sl-text-title">待審項目</div>
+    <div class="sl-text-body">今天有三件事情等你確認。</div>
+    <div class="sl-text-caption" style="color: var(--ink-muted);">最後更新 10/08</div>
+  </section>
+
+</main>
+<script>
+  // 主題切換：在淺色與深色之間切換 data-theme
+  const themeBtn = document.getElementById('themeBtn')
+  const toggleTheme = () => {
+    const root = document.documentElement
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches  //未指定時跟隨系統
+    const isDark = root.dataset.theme ? root.dataset.theme === 'dark' : systemDark
+    root.dataset.theme = isDark ? 'light' : 'dark'
+    themeBtn.textContent = isDark ? '切換深色' : '切換淺色'
+  }
+  themeBtn.addEventListener('click', toggleTheme)
+  if (window.matchMedia('(prefers-color-scheme: dark)').matches) themeBtn.textContent = '切換淺色'  //系統為深色時修正按鈕文字
+</script>
+</body>
+</html>

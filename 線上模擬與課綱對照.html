@@ -1,0 +1,693 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>線上模擬與課綱對照</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500&display=swap">
+<style>
+/* 暖石板琥珀 — 設計 token，請勿手動修改 */
+
+:root, [data-theme="light"] {
+  --surface-page: #F4F1EC;
+  --surface-card: #FFFFFF;
+  --surface-slate: #3A4250;
+  --ink: #2B313C;
+  --ink-muted: #636B78;
+  --on-slate: #E8E2D6;
+  --amber: #E9A23B;
+  --on-amber: #3A2A0C;
+  --amber-text: #8A5A12;
+  --amber-soft: #F7E6C4;
+  --amber-on-slate: #F2B544;
+  --progress-fill: #B07014;
+  --progress-track: #ECE7DE;
+  --line: #E2DCD1;
+  --success: #2A7050;
+  --success-soft: #DCEFE4;
+  --danger: #B23B2E;
+  --danger-soft: #F8DEDA;
+  --focus: #B07014;
+}
+
+[data-theme="dark"] {
+  --surface-page: #1E2229;
+  --surface-card: #272C35;
+  --surface-slate: #4A5363;
+  --ink: #EEEAE3;
+  --ink-muted: #A3ABB8;
+  --on-slate: #E8E2D6;
+  --amber: #F2B544;
+  --on-amber: #3A2A0C;
+  --amber-text: #F2B544;
+  --amber-soft: #4A3A1E;
+  --amber-on-slate: #F2B544;
+  --progress-fill: #F2B544;
+  --progress-track: #343A45;
+  --line: #3A404B;
+  --success: #6CC59A;
+  --success-soft: #1F3A2D;
+  --danger: #F08A7E;
+  --danger-soft: #45231F;
+  --focus: #F2B544;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --surface-page: #1E2229;
+    --surface-card: #272C35;
+    --surface-slate: #4A5363;
+    --ink: #EEEAE3;
+    --ink-muted: #A3ABB8;
+    --on-slate: #E8E2D6;
+    --amber: #F2B544;
+    --on-amber: #3A2A0C;
+    --amber-text: #F2B544;
+    --amber-soft: #4A3A1E;
+    --amber-on-slate: #F2B544;
+    --progress-fill: #F2B544;
+    --progress-track: #343A45;
+    --line: #3A404B;
+    --success: #6CC59A;
+    --success-soft: #1F3A2D;
+    --danger: #F08A7E;
+    --danger-soft: #45231F;
+    --focus: #F2B544;
+  }
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-bar: 2px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+  --font-sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+
+.sl-text-display { font-family: var(--font-sans); font-size: 28px; line-height: 36px; font-weight: 500; }
+.sl-text-title { font-family: var(--font-sans); font-size: 20px; line-height: 28px; font-weight: 500; }
+.sl-text-stat { font-family: var(--font-sans); font-size: 24px; line-height: 30px; font-weight: 500; }
+.sl-text-body { font-family: var(--font-sans); font-size: 15px; line-height: 24px; font-weight: 400; }
+.sl-text-label { font-family: var(--font-sans); font-size: 13px; line-height: 20px; font-weight: 500; }
+.sl-text-caption { font-family: var(--font-sans); font-size: 12px; line-height: 18px; font-weight: 400; }
+
+body { margin: 0; font-family: var(--font-sans); background: var(--surface-page); color: var(--ink); font-size: 15px; line-height: 24px; }
+.sl-row { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; padding: var(--space-4); }
+.sl-btn { font: inherit; font-size: 13px; font-weight: 500; height: 36px; padding: 0 var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--surface-card); color: var(--ink); cursor: pointer; }
+.sl-btn:hover { border-color: var(--ink-muted); }
+.sl-btn-primary { background: var(--amber); border-color: var(--amber); color: var(--on-amber); }
+.sl-btn-primary:hover { border-color: var(--on-amber); }
+.sl-btn-slate { background: var(--surface-slate); border-color: var(--surface-slate); color: var(--on-slate); }
+.sl-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.sl-badge { display: inline-block; font-size: 12px; line-height: 20px; padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--line); color: var(--ink); }
+.sl-badge-amber { background: var(--amber-soft); color: var(--amber-text); }
+.sl-badge-success { background: var(--success-soft); color: var(--success); }
+.sl-badge-danger { background: var(--danger-soft); color: var(--danger); }
+.sl-bento { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.sl-card { background: var(--surface-card); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4); }
+.sl-card-label { font-size: 12px; line-height: 18px; color: var(--ink-muted); }
+.sl-card-value { font-size: 24px; line-height: 30px; font-weight: 500; color: var(--ink); }
+.sl-card-slate { background: var(--surface-slate); }
+.sl-card-slate .sl-card-label { color: var(--on-slate); }
+.sl-card-slate .sl-card-value { color: var(--amber-on-slate); }
+.sl-progress-head { display: flex; justify-content: space-between; font-size: 12px; line-height: 18px; color: var(--ink-muted); margin-bottom: 6px; }
+.sl-progress-num { color: var(--ink); font-weight: 500; }
+.sl-progress-track { height: 4px; border-radius: var(--radius-bar); background: var(--progress-track); overflow: hidden; }
+.sl-progress-fill { height: 100%; border-radius: var(--radius-bar); background: var(--progress-fill); }
+</style>
+<div id="app" style="max-width: 1120px; margin: 0 auto; padding-inline: var(--space-4); padding-block: var(--space-6) var(--space-8); display: grid; gap: var(--space-4);">
+  <header style="display: grid; gap: var(--space-1);">
+    <div class="sl-text-caption" style="color: var(--ink-muted);">108 課綱．國中理化與高中物理　對應初稿 v3</div>
+    <div class="sl-text-display">線上模擬與課綱對照</div>
+    <div class="sl-text-body" style="color: var(--ink-muted); max-width: 64ch;">把「阿偉的物理 x AI 實驗室」的 39 個模擬，對到國中理化、高中必修物理、高中選修物理的學習內容條目與康軒版國中理化章節，並列出還沒有模擬的條目。</div>
+  </header>
+  <section id="summary" aria-label="覆蓋概況"></section>
+  <section id="filters" aria-label="篩選" style="display: grid; gap: var(--space-2);"></section>
+  <main id="list" aria-live="polite" style="display: grid; gap: var(--space-6);"></main>
+  <footer style="display: grid; gap: var(--space-2);">
+    <div class="sl-text-caption" style="color: var(--ink-muted);">條目文字摘自 CIRN 課程與教學資源整合平臺「自然科學領域．伍、學習重點」。對應關係依模擬名稱與網站上的教學問題判斷，沒有逐一操作模擬內容，屬初稿。</div>
+    <div class="sl-text-caption" style="color: var(--ink-muted);">「主要對應」表示模擬直接呈現該條目的現象；「延伸可用」表示只涵蓋一部分，或需要老師補充說明。</div>
+    <div class="sl-text-caption" style="color: var(--ink-muted);">康軒章節與條目的對應取自學校公開的課程計畫，以章為單位，代碼照學校填寫：<span id="hanlin-src"></span>。課程計畫沒有寫章名，所以用「第 N 章」加節名呈現。</div>
+  </footer>
+</div>
+
+<script>
+// 學習階段：國中理化（第四學習階段）、高中部定必修物理（Vc）、高中加深加廣選修物理（Va）
+const stages = [
+  { id:'J', name:'國中理化', note:'第四學習階段' },
+  { id:'C', name:'高中必修物理', note:'部定必修 Vc' },
+  { id:'A', name:'高中選修物理', note:'加深加廣選修 Va' }
+]
+
+// 主題名稱：取自課綱學習內容的主題代碼
+const themeName = {
+  Ea:'自然界的尺度與單位', Eb:'力與運動', Ec:'氣體', Ba:'能量的形式與轉換', Bb:'溫度與熱量',
+  Ka:'波動、光及聲音', Kb:'萬有引力', Kc:'電磁現象', Kd:'量子現象', Ke:'基本交互作用',
+  Mb:'科學發展的歷史', Mc:'科學在生活中的應用', Nc:'能源的開發與利用',
+  Aa:'物質組成與元素的週期性', Ab:'物質的形態、性質及分類', Ca:'物質的分離與鑑定', Cb:'物質的結構與功能',
+  Ja:'物質反應規律', Jb:'水溶液中的變化', Jc:'氧化與還原反應', Jd:'酸鹼反應', Je:'化學反應速率與平衡', Jf:'有機化合物的性質、製備及反應'
+}
+
+// 學習內容條目：摘自 CIRN 自然科學領域「伍、學習重點」
+const codeText = {
+  'Aa-IV-1':'原子模型的發展。',
+  'Aa-IV-2':'原子量與分子量是原子、分子之間的相對質量。',
+  'Aa-IV-3':'純物質包括元素與化合物。',
+  'Aa-IV-4':'元素的性質有規律性和週期性。',
+  'Aa-IV-5':'元素與化合物有特定的化學符號表示法。',
+  'Ab-IV-1':'物質的粒子模型與物質三態。',
+  'Ab-IV-2':'溫度會影響物質的狀態。',
+  'Ab-IV-3':'物質的物理性質與化學性質。',
+  'Ab-IV-4':'物質依是否可用物理方法分離，可分為純物質和混合物。',
+  'Ca-IV-1':'實驗分離混合物，例如：結晶法、過濾法及簡易濾紙色層分析法。',
+  'Ca-IV-2':'化合物可利用化學性質來鑑定。',
+  'Cb-IV-1':'分子與原子。',
+  'Cb-IV-2':'元素會因原子排列方式不同而有不同的特性。',
+  'Cb-IV-3':'分子式相同會因原子排列方式不同而形成不同的物質。',
+  'Ja-IV-1':'化學反應中的質量守恆定律。',
+  'Ja-IV-2':'化學反應是原子重新排列。',
+  'Ja-IV-3':'化學反應中常伴隨沉澱、氣體、顏色及溫度變化等現象。',
+  'Ja-IV-4':'化學反應的表示法。',
+  'Jb-IV-1':'由水溶液導電的實驗認識電解質與非電解質。',
+  'Jb-IV-2':'電解質在水溶液中會解離出陰離子和陽離子而導電。',
+  'Jb-IV-3':'不同的離子在水溶液中可能會發生沉澱、酸鹼中和及氧化還原等反應。',
+  'Jb-IV-4':'溶液的概念及重量百分濃度（P%）、百萬分點的表示法（ppm）。',
+  'Jc-IV-1':'氧化與還原的狹義定義為：物質得到氧稱為氧化反應；失去氧稱為還原反應。',
+  'Jc-IV-2':'物質燃燒實驗認識氧化。',
+  'Jc-IV-3':'不同金屬元素燃燒實驗認識元素對氧氣的活性。',
+  'Jc-IV-4':'生活中常見的氧化還原反應與應用。',
+  'Jc-IV-5':'鋅銅電池實驗認識電池原理。',
+  'Jc-IV-6':'化學電池的放電與充電。',
+  'Jc-IV-7':'電解水與硫酸銅水溶液實驗認識電解原理。',
+  'Jd-IV-1':'金屬與非金屬氧化物在水溶液中的酸鹼性，及酸性溶液對金屬與大理石的反應。',
+  'Jd-IV-2':'酸鹼強度與 pH 值的關係。',
+  'Jd-IV-3':'實驗認識廣用指示劑及 pH 計。',
+  'Jd-IV-4':'水溶液中氫離子與氫氧根離子的關係。',
+  'Jd-IV-5':'酸、鹼、鹽類在日常生活中的應用與危險性。',
+  'Jd-IV-6':'實驗認識酸與鹼中和生成鹽和水，並可放出熱量而使溫度變化。',
+  'Je-IV-1':'實驗認識化學反應速率及影響反應速率的因素，例如：本性、溫度、濃度、接觸面積及催化劑。',
+  'Je-IV-2':'可逆反應。',
+  'Je-IV-3':'化學平衡及溫度、濃度如何影響化學平衡的因素。',
+  'Jf-IV-1':'有機化合物與無機化合物的重要特徵。',
+  'Jf-IV-2':'生活中常見的烷類、醇類、有機酸及酯類。',
+  'Jf-IV-3':'酯化與皂化反應。',
+  'Jf-IV-4':'常見的塑膠。',
+  'Ba-IV-3':'化學反應中的能量改變，常以吸熱或放熱的形式發生。',
+  'Ba-IV-4':'電池是化學能轉變成電能的裝置。',
+  'Ea-IV-1':'時間、長度、質量等為基本物理量，經由計算可得到密度、體積等衍伸物理量。',
+  'Ea-IV-2':'以適當的尺度量測或推估物理量，例如：奈米到光年、毫克到公噸、毫升到立方公尺等。',
+  'Ea-IV-3':'測量時可依工具的最小刻度進行估計。',
+  'Eb-IV-1':'力能引發物體的移動或轉動。',
+  'Eb-IV-2':'力矩會改變物體的轉動，槓桿是力矩的作用。',
+  'Eb-IV-3':'平衡的物體所受合力為零且合力矩為零。',
+  'Eb-IV-4':'摩擦力可分靜摩擦力與動摩擦力。',
+  'Eb-IV-5':'壓力的定義與帕斯卡原理。',
+  'Eb-IV-6':'物體在靜止液體中所受浮力，等於排開液體的重量。',
+  'Eb-IV-7':'簡單機械，例如：槓桿、滑輪、輪軸、齒輪、斜面，通常具有省時、省力，或者是改變作用力方向等功能。',
+  'Eb-IV-8':'距離、時間及方向等概念可用來描述物體的運動。',
+  'Eb-IV-9':'圓周運動是一種加速度運動。',
+  'Eb-IV-10':'物體不受力時，會保持原有的運動狀態。',
+  'Eb-IV-11':'物體做加速度運動時，必受力。以相同的力量作用相同的時間，則質量愈小的物體其受力後造成的速度改變愈大。',
+  'Eb-IV-12':'物體的質量決定其慣性大小。',
+  'Eb-IV-13':'對於每一作用力都有一個大小相等、方向相反的反作用力。',
+  'Ec-IV-1':'大氣壓力是因為大氣層中空氣的重量所造成。',
+  'Ec-IV-2':'定溫下，定量氣體在密閉容器內，其壓力與體積的定性關係。',
+  'Ba-IV-1':'能量有不同形式，例如：動能、熱能、光能、電能、化學能等，而且彼此之間可以轉換。孤立系統的總能量會維持定值。',
+  'Ba-IV-5':'力可以作功，作功可以改變物體的能量。',
+  'Ba-IV-6':'每單位時間對物體所做的功稱為功率。',
+  'Ba-IV-7':'物體的動能與位能之和稱為力學能，動能與位能可以互換。',
+  'Bb-IV-1':'熱具有從高溫處傳到低溫處的趨勢。',
+  'Bb-IV-2':'透過水升高溫度所吸收的熱能定義熱量單位。',
+  'Bb-IV-3':'不同物質受熱後，其溫度的變化可能不同，比熱就是此特性的定量化描述。',
+  'Bb-IV-4':'熱的傳播方式包含傳導、對流與輻射。',
+  'Bb-IV-5':'熱會改變物質形態，例如：狀態產生變化、體積發生脹縮。',
+  'Ka-IV-1':'波的特徵，例如：波峰、波谷、波長、頻率、波速、振幅。',
+  'Ka-IV-2':'波傳播的類型，例如：橫波和縱波。',
+  'Ka-IV-3':'介質的種類、狀態、密度及溫度等因素會影響聲音傳播的速率。',
+  'Ka-IV-4':'聲波會反射，可以做為測量、傳播等用途。',
+  'Ka-IV-5':'耳朵可以分辨不同的聲音，例如：大小、高低及音色，但人耳聽不到超聲波。',
+  'Ka-IV-6':'由針孔成像、影子實驗驗證與說明光的直進性。',
+  'Ka-IV-7':'光速的大小和影響光速的因素。',
+  'Ka-IV-8':'透過實驗探討光的反射與折射規律。',
+  'Ka-IV-9':'生活中有許多運用光學原理的實例或儀器，例如：透鏡、面鏡、眼睛、眼鏡及顯微鏡等。',
+  'Ka-IV-10':'陽光經過三稜鏡可以分散成各種色光。',
+  'Ka-IV-11':'物體的顏色是光選擇性反射的結果。',
+  'Kb-IV-1':'物體在地球或月球等星體上因為星體的引力作用而具有重量；物體之質量與其重量是不同的物理量。',
+  'Kb-IV-2':'帶質量的兩物體之間有重力，例如：萬有引力，此力大小與兩物體各自的質量成正比、與物體間距離的平方成反比。',
+  'Kc-IV-1':'摩擦可以產生靜電，電荷有正負之別。',
+  'Kc-IV-2':'靜止帶電物體之間有靜電力，同號電荷會相斥，異號電荷則會相吸。',
+  'Kc-IV-3':'磁場可以用磁力線表示，磁力線方向即為磁場方向，磁力線越密處磁場越大。',
+  'Kc-IV-4':'電流會產生磁場，其方向分布可以由安培右手定則求得。',
+  'Kc-IV-5':'載流導線在磁場會受力，並簡介電動機的運作原理。',
+  'Kc-IV-6':'環形導線內磁場變化，會產生感應電流。',
+  'Kc-IV-7':'電池連接導體形成通路時，多數導體通過的電流與其兩端電壓差成正比，其比值即為電阻。',
+  'Kc-IV-8':'電流通過帶有電阻物體時，能量會以發熱的形式逸散。',
+
+  'PBa-Vc-1':'電場以及磁場均具有能量，利用手機傳遞訊息即是電磁場以電磁波的形式來傳遞能量的實例。',
+  'PBa-Vc-2':'不同形式的能量間可以轉換，且總能量守恆。能量的形式因觀察尺度的不同，而有不同的展現與說明。',
+  'PBa-Vc-3':'質量及能量可以相互轉換，其轉換公式為 E = mc²。',
+  'PBa-Vc-4':'原子核的融合以及原子核的分裂是質量可以轉換為能量的應用實例，且為目前重要之能源議題。',
+  'PBb-Vc-1':'克氏溫標的意義及理想氣體的內能的簡單說明。',
+  'PBb-Vc-2':'實驗顯示：把功轉換成熱很容易，卻無法把熱完全轉換為功。',
+  'PBb-Vc-3':'物體內的原子不斷在運動並交互作用，此交互作用能量與原子的動能合稱為熱能。',
+  'PBb-Vc-4':'由於物體溫度的不同所造成的能量傳遞稱為熱。',
+  'PEa-Vc-1':'科學上常用的物理量有國際標準單位。',
+  'PEa-Vc-2':'因工具的限制或應用上的方便，許多自然科學所需的測量，包含物理量，是經由基本物理量的測量再計算而得。',
+  'PEa-Vc-3':'原子的大小約為 10⁻¹⁰ 公尺，原子核的大小約為 10⁻¹⁵ 公尺。',
+  'PEb-Vc-1':'伽利略之前學者對物體運動的觀察與思辯。',
+  'PEb-Vc-2':'伽利略對物體運動的研究與思辯歷程。',
+  'PEb-Vc-3':'克卜勒行星運動三大定律發現的歷史背景及內容。',
+  'PEb-Vc-4':'牛頓三大運動定律。',
+  'PEb-Vc-5':'摩擦力、正向力、彈力等常見的作用力。',
+  'PKa-Vc-1':'波速、頻率、波長的數學關係。',
+  'PKa-Vc-2':'定性介紹都卜勒效應及其應用。',
+  'PKa-Vc-3':'歷史上光的主要理論有微粒說和波動說。',
+  'PKa-Vc-4':'光的反射定律，並以波動理論解釋折射定律。',
+  'PKa-Vc-5':'光除了反射和折射現象外，也有干涉及繞射現象。',
+  'PKa-Vc-6':'惠更斯原理可以解釋光波如何前進、干涉和繞射。',
+  'PKa-Vc-7':'馬克士威從其方程式預測電磁波的存在，且計算出電磁波的速度等於光速，因此推論光是一種電磁波，後來也獲得證實。',
+  'PKb-Vc-1':'牛頓運動定律結合萬有引力定律可用以解釋克卜勒行星運動定律。',
+  'PKb-Vc-2':'物體在重力場中運動的定性描述。',
+  'PKc-Vc-1':'電荷會產生電場，兩點電荷間有電力，此力量值與兩點電荷所帶電荷量成正比，與兩點電荷間的距離平方成反比。',
+  'PKc-Vc-2':'原子內帶負電的電子與帶正電的原子核以電力互相吸引，形成穩定的原子結構。',
+  'PKc-Vc-3':'變動的磁場會產生電場，變動的電場會產生磁場。',
+  'PKc-Vc-4':'所有的電磁現象經統整後，皆可由馬克士威方程式描述。',
+  'PKc-Vc-5':'馬克士威方程式預測電磁場的擾動可以在空間中傳遞，即為電磁波。',
+  'PKc-Vc-6':'電磁波包含低頻率的無線電波，到高頻率的伽瑪射線在日常生活中有廣泛的應用。',
+  'PKd-Vc-1':'光具有粒子性，光子能量 E = hν，與其頻率 ν 成正比。',
+  'PKd-Vc-2':'光電效應在日常生活中之應用。',
+  'PKd-Vc-3':'原子光譜。',
+  'PKd-Vc-4':'能階的概念。',
+  'PKd-Vc-5':'電子的雙狹縫干涉現象與其波動性。',
+  'PKd-Vc-6':'光子與電子以及所有微觀粒子都具有波粒二象性。',
+  'PKd-Vc-7':'牛頓運動定律在原子尺度以下並不適用。',
+  'PKe-Vc-1':'原子核內的質子與質子、質子與中子、中子與中子之間有強力使它們互相吸引。',
+  'PKe-Vc-2':'單獨的中子並不穩定，會透過弱作用（或弱力）自動衰變成質子及其他粒子。',
+  'PKe-Vc-3':'自然界的一切交互作用可完全由重力、電磁力、強力、以及弱作用等四種基本交互作用所涵蓋。',
+  'PMc-Vc-1':'用電安全。',
+  'PMc-Vc-2':'電在生活中的應用。',
+  'PMc-Vc-3':'科學的態度與方法。',
+  'PMc-Vc-4':'近代物理科學的發展，以及不同性別、背景、族群者於其中的貢獻。',
+  'PNc-Vc-1':'原子核的分裂。',
+  'PNc-Vc-2':'核能發電與輻射安全。',
+  'PNc-Vc-3':'能量一樣的系統，作功的能力不一定相同。',
+  'PNc-Vc-4':'雖然能量守恆，但能量一旦發生形式上的轉換，通常其作功效能會降低。',
+
+  'PBa-Va-1':'功等於力和位移的向量內積，功率為功的時間變化率。',
+  'PBa-Va-2':'功能定理。',
+  'PBa-Va-3':'位能的定義。',
+  'PBa-Va-4':'重力位能及彈簧位能的一般表示式。',
+  'PBa-Va-5':'一般性的力學能守恆律與實例。',
+  'PBb-Va-1':'理想氣體狀態方程為 PV = nRT，此溫度 T 為絕對溫度。',
+  'PBb-Va-2':'將牛頓力學定律應用到理想氣體動力論，可以推導出氣體壓力以及體積與內能的定量關係。將此結果套用到理想氣體狀態方程式則可得出理想氣體的內能與絕對溫度成正比的結論。',
+  'PBb-Va-3':'在一系統中氣體分子運動速率並非完全相同，而是有一個速率分布。',
+  'PEa-Va-1':'測量都會有不確定度，不確定度源自被測量物、測量儀器的特性，並受測量者及環境的影響。不確定度有國際公定的標準計算方法。',
+  'PEb-Va-1':'質點如在一平面上運動，則其位移、速度、加速度有兩個獨立的分量。',
+  'PEb-Va-2':'直線等加速運動（例如：自由落體運動），其位移、速度、加速度及時間的數學關係。',
+  'PEb-Va-3':'二質點在同一直線上運動，其相對速度為二質點速度之差。',
+  'PEb-Va-4':'簡諧運動為一週期性運動，其位移和速度可用時間的正弦函數或餘弦函數表示。',
+  'PEb-Va-5':'質點如在一平面上運動，則其位移、速度、加速度有兩個分量，應用向量表示，例如：拋體運動，其軌跡是拋物線。',
+  'PEb-Va-6':'質點作等速圓周運動時其速率及角速度不變，但有向心加速度，因此速度的方向會改變。',
+  'PEb-Va-7':'力是向量，可以分解和合成。',
+  'PEb-Va-8':'牛頓三大運動定律包括慣性定律、運動定律、作用與反作用定律。',
+  'PEb-Va-9':'牛頓第二運動定律的應用，例如：簡諧運動與等速圓周運動。',
+  'PEb-Va-10':'質點的動量等於質點的質量乘以速度，其時間變化率等於質點所受作用力。衝量等於動量的變化。',
+  'PEb-Va-11':'質點系統的動量對時間的變化率等於外力的總和，如外力的總和為零，則系統動量守恆。',
+  'PEb-Va-12':'質點系統質心的定義。',
+  'PEb-Va-13':'質心速度、質心加速度及系統總動量及其所受外力的關係。',
+  'PEb-Va-14':'一質點的角動量等於其位置向量和動量的向量外積，其時間變化率等於質點所受的力矩。',
+  'PEb-Va-15':'許多生活上和工程上的問題都可用牛頓三大運動定律來解釋或計算，例如：靜力平衡、摩擦力、一維碰撞問題。',
+  'PKa-Va-1':'力學波須透過介質來傳播，但光可在真空中傳播。',
+  'PKa-Va-2':'介質振動會產生波。',
+  'PKa-Va-3':'正弦波在時間上以及空間中均有週期性。',
+  'PKa-Va-4':'波遇到不同的介質時會反射和透射，例如：繩波。',
+  'PKa-Va-5':'線性波相遇時波形可以疊加。',
+  'PKa-Va-6':'兩個振幅、波長、週期皆相同的波相向行進會經由干涉形成駐波。',
+  'PKa-Va-7':'如聲音形成駐波，其頻率最低者稱為基音，頻率高者稱為泛音。',
+  'PKa-Va-8':'物體振動的頻率和聲波頻率相同時會產生聲音的共振（或共鳴）。',
+  'PKa-Va-9':'惠更斯原理可解釋波的傳遞，波前的每一點就像一個向外傳播的點波源。',
+  'PKa-Va-10':'光有波動的性質。',
+  'PKa-Va-11':'光的折射遵循司乃耳定律，光由光密介質進入光疏介質的入射角大於臨界角時會發生全反射。',
+  'PKa-Va-12':'光經透鏡成像可用透鏡公式分析，透鏡有很多用途。',
+  'PKa-Va-13':'光有干涉與繞射的現象，其亮紋和暗紋決定於相位差。',
+  'PKb-Va-1':'萬有引力定律的說明。',
+  'PKb-Va-2':'地球表面的重力與重力加速度。',
+  'PKb-Va-3':'行星與人造衛星的運動。',
+  'PKb-Va-4':'以圓周運動為例說明如何由萬有引力定律推論出克卜勒定律。',
+  'PKc-Va-1':'可以用電力線表示出電場的大小與方向。',
+  'PKc-Va-2':'庫倫作用力是守恆力，具有位能。',
+  'PKc-Va-3':'在電場中，單位電荷在某點所具有的位能，即為該點之電位。',
+  'PKc-Va-4':'電位差等於電流乘以電阻，此為歐姆定律。',
+  'PKc-Va-5':'電路中電流帶有能量。',
+  'PKc-Va-6':'電路有串聯、並聯及迴路等形式，電路中的能量及電量必須守恆。',
+  'PKc-Va-7':'載流導線如長直導線、圓線圈、長螺線管，會產生磁場，遵循必歐-沙伐定律及安培右手定則。',
+  'PKc-Va-8':'載流導線在磁場中受力，可利用此特性設計電動機。',
+  'PKc-Va-9':'在平面上運動的帶電質點受到垂直於平面之均勻磁場的作用，會受力並做等速圓周運動。',
+  'PKc-Va-10':'磁通量的負時間變化率等於感應電動勢，此為法拉第定律。',
+  'PKc-Va-11':'電壓和電流有直流電和交流電兩種。',
+  'PKc-Va-12':'發電機與變壓器的原理皆為電磁感應。',
+  'PKc-Va-13':'電場變化會產生磁場。',
+  'PKc-Va-14':'電磁波在真空中傳播的速率由電磁常數決定，與頻率無關。',
+  'PKc-Va-15':'平面電磁波的電場、磁場以及傳播方向互相垂直。',
+  'PKd-Va-1':'用湯木生陰極射線管及密立坎油滴實驗測量電子的荷質比及電量。',
+  'PKd-Va-2':'X 射線比起可見光來能量較高、波長較短，可用來分析晶體結構，並且有許多其他的應用。',
+  'PKd-Va-3':'普朗克分析黑體輻射現象，提出量子論之解釋。',
+  'PKd-Va-4':'愛因斯坦分析光電效應，提出光量子論。',
+  'PKd-Va-5':'德布羅意提出物質波理論：物質都具有波與粒子的二象性，並經實驗驗證。',
+  'PKd-Va-6':'拉塞福提出正電荷集中在核心，電子分布在外的原子模型。',
+  'PKd-Va-7':'波耳假設角動量的量子化，提出氫原子模型，成功解釋氫原子光譜。',
+  'PKd-Va-8':'依照量子力學解釋，原子內之電子是以機率分布出現，沒有固定的古典軌道。',
+  'PKe-Va-1':'質子和中子可組成結構穩定以及不穩定的原子核。',
+  'PKe-Va-2':'不穩定的原子核會經由放射性衰變釋放能量或轉變為其他的原子核。',
+  'PKe-Va-3':'基本交互作用遵循許多守恆律，例如：動量守恆、角動量守恆、質能守恆、電荷守恆。',
+  'PMb-Va-1':'克卜勒定律和萬有引力定律的關係。',
+  'PMb-Va-2':'伽利略的慣性原理和牛頓運動定律的關係。',
+  'PMc-Va-1':'以物理原理解釋自然現象，例如：光的各種現象、天體運動、各種力的作用。',
+  'PMc-Va-2':'電路、電磁波、透鏡、核能、光電效應的應用。'
+}
+
+// 由代碼判斷學習階段與主題
+const stageOf = (code) => /^P.*-Vc-/.test(code) ? 'C' : /^P.*-Va-/.test(code) ? 'A' : 'J'
+const themeOf = (code) => (code.startsWith('P') ? code.slice(1, 3) : code.slice(0, 2))
+const allCodes = Object.keys(codeText)
+
+// 阿偉的物理 x AI 實驗室：模擬清單與可能對應的學習內容
+// main：主要對應；ext：延伸可用（模擬只涵蓋一部分，或需要老師補充）
+const A = 'https://aweilab.com/'
+const sims = [
+  { id:'uncertainty', t:'測量與不確定度模擬器', cat:'測量與基礎概念', url:A+'measurement/uncertainty-sim', q:'重複測量後，如何表達結果的不確定度？', main:['PEa-Va-1','Ea-IV-3'], ext:['PEa-Vc-2'] },
+  { id:'unit', t:'單位與因次模擬器', cat:'測量與基礎概念', url:A+'measurement/unit-dimension-sim', q:'如何用單位與因次檢查物理公式？', main:['PEa-Vc-1','PEa-Vc-2'], ext:['Ea-IV-1'] },
+  { id:'history', t:'物理史問答旅程模擬器', cat:'測量與基礎概念', url:A+'measurement/physics-history-sim', q:'當觀察與理論不符，科學如何前進？', main:['PEb-Vc-1','PEb-Vc-2','PMc-Vc-3'], ext:['PMc-Vc-4','PEb-Vc-3'] },
+  { id:'dictionary', t:'物理科學字典互動查詢', cat:'測量與基礎概念', url:A+'reference/symbol-dictionary', q:'物理符號、物理量與單位有何不同？', main:['PEa-Vc-1'], ext:['Ea-IV-1'] },
+  { id:'fan', t:'3D 風扇風場探究模擬器', cat:'測量與基礎概念', url:A+'measurement/fan-airflow-sim', q:'離風扇越遠，測到的風速如何改變？', main:[], ext:['Ea-IV-3','PEa-Va-1'], note:'主要練習探究與實作的學習表現，沒有直接對應的學習內容條目。' },
+
+  { id:'vertical', t:'鉛直運動模擬', cat:'運動學', url:A+'kinematics/vertical-motion-sim', q:'上拋到最高點時，速度與加速度各是多少？', main:['PEb-Va-2'], ext:['Eb-IV-8','Eb-IV-11','PKb-Va-2'] },
+  { id:'proj2d', t:'2D 斜拋運動模擬器', cat:'運動學', url:A+'kinematics/projectile-motion-2d-sim', q:'為什麼水平與鉛直運動可以分開分析？', main:['PEb-Va-5','PEb-Va-1'], ext:['PKb-Vc-2'] },
+  { id:'proj3d', t:'3D 斜拋運動模擬器', cat:'運動學', url:A+'kinematics/projectile-motion-3d-sim', q:'為什麼水平與鉛直運動可以分開分析？', main:['PEb-Va-5','PEb-Va-1'], ext:['PKb-Vc-2'] },
+  { id:'shm', t:'簡諧運動彈簧振子模擬器', cat:'運動學', url:A+'kinematics/shm-sim', q:'彈簧振子的位置、速度與能量如何變化？', main:['PEb-Va-4','PEb-Va-9'], ext:['PBa-Va-4','PBa-Va-5'] },
+  { id:'refcircle', t:'參考圓簡諧運動模擬器', cat:'運動學', url:A+'kinematics/reference-circle-sim', q:'等速圓周運動的投影為什麼是簡諧運動？', main:['PEb-Va-4','PEb-Va-6'], ext:['PEb-Va-9'] },
+
+  { id:'torque', t:'力矩模擬', cat:'力學', url:A+'mechanics/torque-sim', q:'同樣大小的力，施在哪裡最容易轉動？', main:['Eb-IV-2','Eb-IV-1'], ext:['Eb-IV-7','PEb-Va-15'] },
+  { id:'friction', t:'摩擦力模擬', cat:'力學', url:A+'mechanics/friction-sim', q:'物體還沒滑動時，摩擦力到底有多大？', main:['Eb-IV-4','PEb-Vc-5'], ext:['PEb-Va-15'] },
+  { id:'incline', t:'斜面摩擦力模擬', cat:'力學', url:A+'mechanics/inclined-friction-sim', q:'斜面上的物體何時開始下滑？', main:['PEb-Vc-5','PEb-Va-7'], ext:['Eb-IV-4','PEb-Va-15'] },
+  { id:'gravitation', t:'萬有引力與重力場模擬', cat:'力學', url:A+'mechanics/gravitation-sim', q:'距離變成兩倍，引力會剩下多少？', main:['Kb-IV-2','PKb-Va-1'], ext:['Kb-IV-1','PKb-Va-2','PKb-Vc-2'] },
+  { id:'powerlaw', t:'變種引力模擬器', cat:'力學', url:A+'mechanics/power-law-gravity-sim', q:'改變引力的距離次方，軌道會變成什麼樣子？', main:['PKb-Va-4'], ext:['PKb-Vc-1','PKb-Va-3','PMb-Va-1'], note:'屬延伸探究：課綱只要求平方反比，改變次方是對照用。' },
+  { id:'cavendish', t:'卡文迪西扭秤模擬', cat:'力學', url:A+'mechanics/cavendish-sim', q:'怎麼在實驗室量到兩個鉛球之間的引力？', main:['PKb-Va-1'], ext:['Kb-IV-2'] },
+  { id:'com', t:'質心運動模擬', cat:'力學', url:A+'mechanics/center-of-mass-sim', q:'質量分布不均時，質心會偏向哪一邊？', main:['PEb-Va-12','PEb-Va-13'], ext:[] },
+  { id:'comcons', t:'質心守恆模擬', cat:'力學', url:A+'mechanics/com-conservation-sim', q:'外力為零時，系統的質心如何運動？', main:['PEb-Va-13','PEb-Va-11'], ext:[] },
+  { id:'static', t:'靜力平衡模擬', cat:'力學', url:A+'mechanics/static-equilibrium-sim', q:'合力為零，就一定不會轉動嗎？', main:['Eb-IV-3','PEb-Va-15'], ext:['PEb-Va-7','Eb-IV-2'] },
+  { id:'angmom', t:'角動量模擬', cat:'力學', url:A+'mechanics/angular-momentum-sim', q:'外力矩為零時，縮小半徑為何會加快旋轉？', main:['PEb-Va-14'], ext:['PKe-Va-3','PEb-Va-6'] },
+  { id:'col1d', t:'一維碰撞模擬', cat:'力學', url:A+'mechanics/1d-collision-sim', q:'碰撞前後，動量與動能都會守恆嗎？', main:['PEb-Va-10','PEb-Va-11','PEb-Va-15'], ext:['PBa-Va-5','PEb-Va-3','Eb-IV-13'] },
+  { id:'col2d', t:'二維碰撞模擬', cat:'力學', url:A+'mechanics/2d-collision-sim', q:'斜向碰撞時，如何分解動量判斷去向？', main:['PEb-Va-11'], ext:['PEb-Va-1','PEb-Va-7'] },
+  { id:'col3d', t:'三維碰撞模擬', cat:'力學', url:A+'mechanics/3d-collision-sim', q:'空間中的碰撞，如何檢查三方向動量守恆？', main:['PEb-Va-11'], ext:['PEb-Va-1'], note:'課綱只到平面運動，三維屬延伸。' },
+  { id:'vcircle', t:'鉛直面圓周運動模擬', cat:'力學', url:A+'mechanics/vertical-circular-motion-sim', q:'小球要多快，才能通過圓周最高點？', main:['PEb-Va-9','PBa-Va-5'], ext:['PEb-Va-6','Eb-IV-9'] },
+  { id:'gpe', t:'重力位能模擬', cat:'力學', url:A+'mechanics/gravitational-potential-energy-sim', q:'遠離地球時，為什麼不能一直用 mgh？', main:['PBa-Va-4','PBa-Va-3'], ext:['PKb-Va-2','PKb-Va-3'] },
+  { id:'clash', t:'Mass Clash 質量競技場', cat:'力學', url:A+'collision-arena', q:'多人連線的碰撞課堂遊戲（網站標示測試中）。', main:['PEb-Va-11'], ext:['PEb-Va-10','Eb-IV-12'] },
+  { id:'galileo', t:'伽利略斜坡實驗模擬器', cat:'力學', url:A+'SimulatorCreationArea/galileo-incline-sim', q:'斜面越平緩，小球要走多遠才能回到原高度？', main:['PEb-Vc-2','Eb-IV-10'], ext:['PMb-Va-2','Ba-IV-7'] },
+
+  { id:'kinetic', t:'理想氣體動力論模擬', cat:'熱學', url:A+'thermodynamics/kinetic-theory-sim', q:'看不見的分子碰撞，如何產生氣體壓力？', main:['PBb-Va-2','PBb-Va-3'], ext:['PBb-Va-1','PBb-Vc-1','PBb-Vc-3','Ec-IV-2'] },
+
+  { id:'ampere', t:'安培右手定則手勢模擬器', cat:'電磁學', url:A+'electromagnetism/ampere-right-hand-sim', q:'知道電流方向，如何判斷周圍的磁場？', main:['Kc-IV-4','PKc-Va-7'], ext:['Kc-IV-3'] },
+  { id:'palm', t:'右手開掌定則手勢模擬器', cat:'電磁學', url:A+'electromagnetism/right-hand-palm-rule-sim', q:'電荷在磁場中運動，受力方向怎麼判斷？', main:['PKc-Va-8','PKc-Va-9'], ext:['Kc-IV-5'] },
+  { id:'induction', t:'電磁感應模擬', cat:'電磁學', url:A+'electromagnetism/em-induction-sim', q:'磁鐵與線圈相對移動，為什麼會產生電流？', main:['Kc-IV-6','PKc-Va-10'], ext:['PKc-Va-12','PKc-Vc-3'] },
+
+  { id:'tir', t:'全反射與光纖互動模擬器', cat:'波動與光學', url:A+'waves-optics/tir-fiber-sim', q:'光為什麼能沿著光纖傳遞而不逸出？', main:['PKa-Va-11'], ext:['Ka-IV-8','PKa-Vc-4','PMc-Va-1'] },
+  { id:'doppler', t:'3D 都卜勒效應與馬赫錐模擬器', cat:'波動與光學', url:A+'waves-optics/doppler-effect-3d-sim', q:'波源靠近或遠離時，接收頻率為何不同？', main:['PKa-Vc-2'], ext:['PKa-Vc-1'], note:'馬赫錐不在課綱內，屬延伸。' },
+  { id:'superpos', t:'波的疊加與駐波互動模擬器', cat:'波動與光學', url:A+'waves-optics/wave-superposition-sim', q:'兩列波相遇，何時增強、何時抵消？', main:['PKa-Va-5','PKa-Va-6'], ext:['Ka-IV-1','PKa-Va-3','PKa-Va-7','PKa-Vc-1'] },
+  { id:'optics', t:'透鏡與面鏡成像互動模擬器', cat:'波動與光學', url:A+'waves-optics/geometric-optics-sim', q:'物體移過焦點，成像會發生什麼變化？', main:['Ka-IV-9','PKa-Va-12'], ext:['Ka-IV-8','PMc-Va-2'] },
+
+  { id:'photo', t:'光電效應互動模擬器', cat:'近代物理', url:A+'modern-physics/photoelectric-effect-sim', q:'光更亮，就一定能讓電子逸出嗎？', main:['PKd-Va-4','PKd-Vc-1'], ext:['PKd-Vc-2','PKd-Vc-6','PMc-Va-2'] },
+  { id:'micro', t:'微觀漫遊：從你我身邊，進入物質的深處', cat:'近代物理', url:A+'modern-physics/micro-scale-sim', q:'從日常尺度一路縮小到原子與原子核。', main:['PEa-Vc-3','Ea-IV-2'], ext:['PKe-Va-1'] },
+  { id:'emc2', t:'質能互換模擬器', cat:'近代物理', url:A+'modern-physics/emc2-sim', q:'微小的質量差，如何對應巨大的能量？', main:['PBa-Vc-3','PBa-Vc-4'], ext:['PNc-Vc-1','PKe-Va-3','PBa-Vc-2'] },
+
+  { id:'cosmic', t:'宇宙漫遊：從可觀測宇宙到你我身邊', cat:'天文與宇宙', url:A+'astronomy/cosmic-scale-sim', q:'從地球到可觀測宇宙，尺度相差多少？', main:['Ea-IV-2'], ext:[], note:'國中地科的 Ed-IV-1、Ed-IV-2（星系、銀河系）也可搭配使用。' }
+]
+
+// 康軒版國中理化（物理＋化學）章節與課綱學習內容對應
+// 來源：富禮國中 113 學年八年級、竹光國中 115 學年九年級課程計畫（皆標示選用康軒版）
+// 課程計畫只寫到「節」，沒有章名，所以章以「第 N 章」加節名呈現
+// 只收理化的學習內容代碼；跨科主題與 M、N、IN 開頭的代碼不列入
+const tbSources = [
+  { name:'新竹市富禮國中 113 學年 八年級理化課程計畫', url:'https://www.fljh.hc.edu.tw/uploads/1725511550935I7jxhje4.pdf' },
+  { name:'新竹市竹光國中 115 學年 九年級自然課程計畫', url:'https://www.zgjh.hc.edu.tw/uploads/1785377623562g3YEkKSC.pdf' }
+]
+const textbook = [
+  { id:'8a1', book:'八上（第三冊）', ch:'第 1 章', subj:'物理', secs:'進入實驗室；1-1 長度與體積的測量；1-2 質量與密度的測量', codes:['Ea-IV-1','Ea-IV-3'] },
+  { id:'8a2', book:'八上（第三冊）', ch:'第 2 章', subj:'化學', secs:'2-1 認識物質；2-2 水溶液；2-3 空氣的組成', codes:['Ab-IV-1','Ab-IV-3','Ab-IV-4','Ca-IV-1','Ja-IV-2','Jb-IV-4'] },
+  { id:'8a3', book:'八上（第三冊）', ch:'第 3 章', subj:'物理', secs:'3-1 波的傳播；3-2 聲波的產生與傳播；3-3 聲波的反射與超聲波；3-4 多變的聲音', codes:['Ka-IV-1','Ka-IV-3','Ka-IV-4','Ka-IV-5'] },
+  { id:'8a4', book:'八上（第三冊）', ch:'第 4 章', subj:'物理', secs:'4-1 光的傳播與光速；4-2 光的反射與面鏡；4-3 光的折射與透鏡；4-4 光學儀器；4-5 色光與顏色', codes:['Ka-IV-6','Ka-IV-7','Ka-IV-8','Ka-IV-9','Ka-IV-10'] },
+  { id:'8a5', book:'八上（第三冊）', ch:'第 5 章', subj:'物理', secs:'5-1 溫度與溫度計；5-2 熱量與比熱；5-3 熱對物質的影響；5-4 熱的傳播方式', codes:['Bb-IV-1','Bb-IV-2','Bb-IV-3','Bb-IV-4','Bb-IV-5','Ab-IV-1','Ab-IV-2','Ba-IV-3'] },
+  { id:'8a6', book:'八上（第三冊）', ch:'第 6 章', subj:'化學', secs:'6-1 元素的探索；6-2 元素週期表；6-3 化合物與原子概念的發展；6-4 分子與化學式', codes:['Aa-IV-1','Aa-IV-3','Aa-IV-4','Aa-IV-5','Cb-IV-1','Cb-IV-2','Ja-IV-2'] },
+  { id:'8b1', book:'八下（第四冊）', ch:'第 1 章', subj:'化學', secs:'1-1 質量守恆；1-2 化學反應的微觀世界', codes:['Ja-IV-1','Ja-IV-3','Ja-IV-4','Aa-IV-2'] },
+  { id:'8b2', book:'八下（第四冊）', ch:'第 2 章', subj:'化學', secs:'2-1 氧化反應；2-2 氧化與還原反應', codes:['Jc-IV-1','Jc-IV-2','Jc-IV-3','Jc-IV-4'] },
+  { id:'8b3', book:'八下（第四冊）', ch:'第 3 章', subj:'化學', secs:'3-1 認識電解質；3-2 常見的酸、鹼性物質；3-3 酸鹼的濃度；3-4 酸鹼中和', codes:['Ca-IV-2','Jb-IV-1','Jb-IV-2','Jb-IV-3','Jd-IV-1','Jd-IV-2','Jd-IV-3','Jd-IV-4','Jd-IV-5','Jd-IV-6'] },
+  { id:'8b4', book:'八下（第四冊）', ch:'第 4 章', subj:'化學', secs:'4-1 反應速率；4-2 可逆反應與平衡', codes:['Je-IV-1','Je-IV-2','Je-IV-3'] },
+  { id:'8b5', book:'八下（第四冊）', ch:'第 5 章', subj:'化學', secs:'5-1 認識有機化合物；5-2 常見的有機化合物；5-3 肥皂與清潔劑；5-4 生活中的有機聚合物', codes:['Jf-IV-1','Jf-IV-2','Jf-IV-3','Jf-IV-4','Cb-IV-3'] },
+  { id:'8b6', book:'八下（第四冊）', ch:'第 6 章', subj:'物理', secs:'6-1 力與平衡；6-2 摩擦力；6-3 壓力；6-4 浮力', codes:['Eb-IV-1','Eb-IV-3','Eb-IV-4','Eb-IV-5','Eb-IV-6','Ec-IV-1','Ec-IV-2'] },
+  { id:'9a1', book:'九上（第五冊）', ch:'第 1 章', subj:'物理', secs:'1-1 時間的測量；1-2 位移與路徑長；1-3 速率與速度；1-4 加速度與等加速度運動', codes:['Eb-IV-8'] },
+  { id:'9a2', book:'九上（第五冊）', ch:'第 2 章', subj:'物理', secs:'2-1 牛頓第一運動定律；2-2 牛頓第二運動定律；2-3 牛頓第三運動定律；2-4 圓周運動與萬有引力', codes:['Eb-IV-9','Eb-IV-10','Eb-IV-11','Eb-IV-12','Eb-IV-13','Kb-IV-1','Kb-IV-2'] },
+  { id:'9a3', book:'九上（第五冊）', ch:'第 3 章', subj:'物理', secs:'3-1 功與功率；3-2 動能、位能與能量守恆；3-3 槓桿原理與靜力平衡；3-4 簡單機械', codes:['Ba-IV-1','Ba-IV-5','Ba-IV-6','Ba-IV-7','Eb-IV-2','Eb-IV-3','Eb-IV-7'] },
+  { id:'9a4', book:'九上（第五冊）', ch:'第 4 章', subj:'物理', secs:'4-1 靜電現象；4-2 電流；4-3 電壓；4-4 電阻與歐姆定律', codes:['Kc-IV-1','Kc-IV-2','Kc-IV-7'] },
+  { id:'9b1', book:'九下（第六冊）', ch:'第 1 章', subj:'物理＋化學', secs:'1-1 電流的熱效應與電能；1-2 電與生活；1-3 電池；1-4 電流的化學效應', codes:['Kc-IV-8','Ba-IV-4','Jc-IV-5','Jc-IV-6','Jc-IV-7'] },
+  { id:'9b2', book:'九下（第六冊）', ch:'第 2 章', subj:'物理', secs:'2-1 磁鐵與磁場；2-2 電流的磁效應；2-3 電流與磁場的交互作用；2-4 電磁感應', codes:['Kc-IV-3','Kc-IV-4','Kc-IV-5','Kc-IV-6'] }
+]
+// 條目 → 康軒章節
+const textbookOf = (code) => textbook.filter(h => h.codes.includes(code))
+
+
+// 畫面狀態：view 為 code（依條目）或 sim（依模擬）
+const state = { stage:'C', view:'code', theme:'all', cover:'all', open:{} }
+
+// 條目 → 對應模擬（分主要與延伸）
+const simsFor = (code) => ({
+  main: sims.filter(s => s.main.includes(code)),
+  ext: sims.filter(s => s.ext.includes(code))
+})
+const isCovered = (code) => { const r = simsFor(code); return r.main.length + r.ext.length > 0 }
+const codesOfStage = (st) => allCodes.filter(c => stageOf(c) === st)
+const themesOfStage = (st) => [...new Set(codesOfStage(st).map(themeOf))]
+
+// 便當格：目前階段的覆蓋情形
+const renderSummary = () => {
+  const codes = codesOfStage(state.stage)
+  const main = codes.filter(c => simsFor(c).main.length).length
+  const any = codes.filter(isCovered).length
+  const pct = Math.round(any / codes.length * 100)
+  const stage = stages.find(s => s.id === state.stage)
+  document.getElementById('summary').innerHTML = `
+    <div class="sl-bento">
+      <div class="sl-card" style="grid-column: span 2;">
+        <div class="sl-card-label">${stage.name}：有模擬可用的條目比例</div>
+        <div class="sl-card-value">${pct}%</div>
+        <div class="sl-progress-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="有模擬可用的條目比例" style="margin-top: var(--space-2);">
+          <div class="sl-progress-fill" style="width: ${pct}%;"></div>
+        </div>
+      </div>
+      <div class="sl-card">
+        <div class="sl-card-label">主要對應的條目</div>
+        <div class="sl-card-value">${main}<span class="sl-text-caption" style="color: var(--ink-muted);"> / ${codes.length} 條</span></div>
+      </div>
+      <div class="sl-card sl-card-slate">
+        <div class="sl-card-label">還沒有模擬的條目</div>
+        <div class="sl-card-value">${codes.length - any}<span class="sl-text-caption" style="color: var(--on-slate);"> 條</span></div>
+      </div>
+    </div>`
+}
+
+// 篩選列：選取中的按鈕用石板色
+const btn = (label, active, attrs) => `<button class="sl-btn ${active ? 'sl-btn-slate' : ''}" type="button" aria-pressed="${active}" ${attrs}>${label}</button>`
+const row = (label, html) => `<div class="sl-row" style="padding: 0;"><span class="sl-text-label" style="color: var(--ink-muted); min-width: 3em;">${label}</span>${html}</div>`
+
+const renderFilters = () => {
+  const stageBtns = stages.map(s => btn(`${s.name}`, state.stage === s.id, `data-stage="${s.id}"`)).join('')
+  const viewBtns = btn('依條目', state.view === 'code', 'data-view="code"') + btn('依模擬', state.view === 'sim', 'data-view="sim"') + btn('依康軒章節', state.view === 'hanlin', 'data-view="hanlin"')
+  // 依模擬時每張卡片已列出三個階段，所以不顯示階段篩選
+  let html = row('檢視', viewBtns) + (state.view === 'code' ? row('階段', stageBtns) : '')
+  if (state.view === 'code') {
+    const themeBtns = [btn('全部主題', state.theme === 'all', 'data-theme-f="all"')]
+      .concat(themesOfStage(state.stage).map(t => {
+        const miss = codesOfStage(state.stage).filter(c => themeOf(c) === t && !isCovered(c)).length
+        return btn(`${themeName[t]}（缺 ${miss}）`, state.theme === t, `data-theme-f="${t}"`)
+      })).join('')
+    const coverBtns = btn('全部條目', state.cover === 'all', 'data-cover="all"') + btn('只看沒有模擬', state.cover === 'missing', 'data-cover="missing"') + btn('只看有模擬', state.cover === 'covered', 'data-cover="covered"')
+    html += row('主題', themeBtns) + row('覆蓋', coverBtns)
+  }
+  document.getElementById('filters').innerHTML = html
+}
+
+// 模擬小卡（依條目檢視時展開用）
+const simMini = (s, kind) => `
+  <a class="sl-card" href="${s.url}" target="_blank" rel="noopener" style="display: grid; gap: var(--space-1); border: 1px solid var(--line); color: var(--ink); text-decoration: none; min-width: 0;">
+    <span style="display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center;"><span class="sl-text-label">${s.t}</span>${kind === 'main' ? '<span class="sl-badge sl-badge-success">主要對應</span>' : '<span class="sl-badge sl-badge-amber">延伸可用</span>'}</span>
+    <span class="sl-text-caption" style="color: var(--ink-muted);">${s.cat}．${s.q}</span>
+  </a>`
+
+// 國中條目在康軒版的章節位置
+const hanlinLine = (code) => {
+  const hs = textbookOf(code)
+  if (!hs.length) return ''
+  return `<div class="sl-text-caption" style="color: var(--ink-muted);">康軒：${hs.map(h => `${h.book.slice(0, 2)} ${h.ch}`).join('、')}</div>`
+}
+
+// 單一條目列
+const codeRow = (code) => {
+  const r = simsFor(code)
+  const n = r.main.length + r.ext.length
+  const isOpen = !!state.open[code]
+  const badge = r.main.length
+    ? `<span class="sl-badge sl-badge-success">主要對應 ${r.main.length} 個</span>`
+    : r.ext.length ? `<span class="sl-badge sl-badge-amber">僅延伸 ${r.ext.length} 個</span>` : '<span class="sl-badge sl-badge-danger">沒有模擬</span>'
+  const action = n
+    ? `<button class="sl-btn" type="button" data-toggle="${code}" aria-expanded="${isOpen}">${isOpen ? '收合模擬' : '查看模擬'}</button>`
+    : '<span class="sl-text-caption" style="color: var(--ink-muted);">日後可開發</span>'
+  const grid = isOpen
+    ? `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-2); margin-top: var(--space-3);">${r.main.map(s => simMini(s, 'main')).join('')}${r.ext.map(s => simMini(s, 'ext')).join('')}</div>`
+    : ''
+  return `
+    <div class="sl-card">
+      <div style="display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; justify-content: space-between;">
+        <div style="display: grid; gap: var(--space-1); flex: 1 1 260px; min-width: 0;">
+          <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center;"><span class="sl-text-label">${code}</span>${badge}</div>
+          <div class="sl-text-body">${codeText[code]}</div>
+          ${hanlinLine(code)}
+        </div>
+        ${action}
+      </div>
+      ${grid}
+    </div>`
+}
+
+// 依條目：按主題分組
+const renderByCode = () => {
+  const pass = (c) => state.cover === 'all' || (state.cover === 'missing' ? !isCovered(c) : isCovered(c))
+  const themes = themesOfStage(state.stage).filter(t => state.theme === 'all' || t === state.theme)
+  return themes.map(t => {
+    const codes = codesOfStage(state.stage).filter(c => themeOf(c) === t && pass(c))
+    const body = codes.length
+      ? `<div style="display: grid; gap: var(--space-2);">${codes.map(codeRow).join('')}</div>`
+      : `<div class="sl-card"><div class="sl-text-body" style="color: var(--ink-muted);">${state.cover === 'missing' ? '這個主題的條目都已有模擬可用。' : '這個主題目前沒有模擬對應。'}</div></div>`
+    return `<section style="display: grid; gap: var(--space-3);"><div class="sl-text-title">${themeName[t]}</div>${body}</section>`
+  }).join('')
+}
+
+// 依模擬：每張卡列出在目前階段的對應條目
+const simCard = (s) => {
+  const tag = (c, cls) => `<span class="sl-badge ${cls}" title="${codeText[c]}">${c}</span>`
+  // 三個階段各一列，沒有對應的階段不顯示
+  const codes = stages.map(st => {
+    const main = s.main.filter(c => stageOf(c) === st.id)
+    const ext = s.ext.filter(c => stageOf(c) === st.id)
+    if (!main.length && !ext.length) return ''
+    return `<div style="display: grid; gap: var(--space-1);"><span class="sl-text-caption" style="color: var(--ink-muted);">${st.name}</span><div style="display: flex; flex-wrap: wrap; gap: var(--space-1);">${main.map(c => tag(c, 'sl-badge-success')).join('')}${ext.map(c => tag(c, 'sl-badge-amber')).join('')}</div></div>`
+  }).join('') || '<span class="sl-badge">沒有對應的學習內容條目</span>'
+  // 國中條目落在哪些康軒章節
+  const hs = [...new Set([...s.main, ...s.ext].filter(c => stageOf(c) === 'J').flatMap(c => textbookOf(c).map(h => `${h.book.slice(0, 2)} ${h.ch}`)))]
+  const hl = hs.length ? `<div class="sl-text-caption" style="color: var(--ink-muted);">康軒章節：${hs.join('、')}</div>` : ''
+  const note = hl + (s.note ? `<div class="sl-text-caption" style="color: var(--ink-muted);">${s.note}</div>` : '')
+  return `
+    <article class="sl-card" style="display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; border: 1px solid var(--line);">
+      <a href="${s.url}" target="_blank" rel="noopener" class="sl-text-label" style="color: var(--ink); font-size: 15px; line-height: 22px;">${s.t}</a>
+      <div class="sl-text-caption" style="color: var(--ink-muted);">${s.cat}．${s.q}</div>
+      <div style="display: grid; gap: var(--space-2); margin-top: auto;">${codes}</div>
+      ${note}
+    </article>`
+}
+
+const renderBySim = () => {
+  const cats = [...new Set(sims.map(s => s.cat))]
+  const legend = '<div class="sl-row" style="padding: 0; gap: var(--space-2);"><span class="sl-badge sl-badge-success">主要對應</span><span class="sl-badge sl-badge-amber">延伸可用</span><span class="sl-text-caption" style="color: var(--ink-muted);">滑鼠移到代號上可看條目全文</span></div>'
+  return legend + cats.map(cat => `
+    <section style="display: grid; gap: var(--space-3);">
+      <div class="sl-text-title">${cat}</div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--space-3);">${sims.filter(s => s.cat === cat).map(simCard).join('')}</div>
+    </section>`).join('')
+}
+
+// 依康軒章節：每章列出條目，並可展開這章能用的模擬
+const hanlinCard = (h) => {
+  const isOpen = !!state.open['h:' + h.id]
+  const tags = h.codes.map(c => `<span class="sl-badge ${isCovered(c) ? 'sl-badge-success' : 'sl-badge-danger'}" title="${codeText[c]}">${c}</span>`).join('')
+  const usable = sims.filter(s => h.codes.some(c => s.main.includes(c) || s.ext.includes(c)))
+  const missing = h.codes.filter(c => !isCovered(c))
+  const status = usable.length
+    ? `<span class="sl-badge sl-badge-success">可用模擬 ${usable.length} 個</span>`
+    : '<span class="sl-badge sl-badge-danger">沒有模擬</span>'
+  const action = usable.length
+    ? `<button class="sl-btn" type="button" data-toggle="h:${h.id}" aria-expanded="${isOpen}">${isOpen ? '收合模擬' : '查看模擬'}</button>`
+    : '<span class="sl-text-caption" style="color: var(--ink-muted);">日後可開發</span>'
+  const kindOf = (s) => h.codes.some(c => s.main.includes(c)) ? 'main' : 'ext'
+  const grid = isOpen
+    ? `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-2); margin-top: var(--space-3);">${usable.map(s => simMini(s, kindOf(s))).join('')}</div>`
+    : ''
+  const gap = missing.length
+    ? `<div class="sl-text-caption" style="color: var(--ink-muted);">還沒有模擬：${missing.map(c => `${c} ${codeText[c].replace(/。$/, '')}`).join('；')}</div>`
+    : ''
+  return `
+    <div class="sl-card">
+      <div style="display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; justify-content: space-between;">
+        <div style="display: grid; gap: var(--space-1); flex: 1 1 260px; min-width: 0;">
+          <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center;"><span class="sl-text-label">${h.ch}</span><span class="sl-badge">${h.subj}</span>${status}</div>
+          <div class="sl-text-caption" style="color: var(--ink-muted);">${h.secs}</div>
+          <div style="display: flex; flex-wrap: wrap; gap: var(--space-1);">${tags}</div>
+          ${gap}
+        </div>
+        ${action}
+      </div>
+      ${grid}
+    </div>`
+}
+
+// 課程計畫沒有填到的國中條目，單獨列出，不自行歸章
+const unlistedSection = () => {
+  const used = new Set(textbook.flatMap(h => h.codes))
+  const codes = codesOfStage('J').filter(c => !used.has(c))
+  if (!codes.length) return ''
+  return `
+    <section style="display: grid; gap: var(--space-3);">
+      <div class="sl-text-title">課程計畫未列出的條目</div>
+      <div class="sl-text-caption" style="color: var(--ink-muted);">這些條目沒有出現在學校填寫的課程計畫中，章節位置請以課本為準。</div>
+      <div style="display: grid; gap: var(--space-2);">${codes.map(codeRow).join('')}</div>
+    </section>`
+}
+
+const renderByHanlin = () => {
+  const books = [...new Set(textbook.map(h => h.book))]
+  const legend = '<div class="sl-row" style="padding: 0; gap: var(--space-2);"><span class="sl-badge sl-badge-success">有模擬</span><span class="sl-badge sl-badge-danger">沒有模擬</span><span class="sl-text-caption" style="color: var(--ink-muted);">列出理化的物理與化學章節；地科章節與跨科主題未列入</span></div>'
+  return legend + books.map(b => `
+    <section style="display: grid; gap: var(--space-3);">
+      <div class="sl-text-title">${b}</div>
+      <div style="display: grid; gap: var(--space-2);">${textbook.filter(h => h.book === b).map(hanlinCard).join('')}</div>
+    </section>`).join('') + unlistedSection()
+}
+
+const render = () => {
+  // 康軒章節只屬國中，切到這個檢視時概況改看國中理化
+  if (state.view === 'hanlin') state.stage = 'J'
+  renderSummary()
+  renderFilters()
+  const views = { code: renderByCode, sim: renderBySim, hanlin: renderByHanlin }
+  document.getElementById('list').innerHTML = views[state.view]()
+}
+
+// 事件委派
+document.getElementById('app').addEventListener('click', (e) => {
+  const t = e.target.closest('button')
+  if (!t) return
+  const d = t.dataset
+  if (d.stage) { state.stage = d.stage; state.theme = 'all' }
+  else if (d.view) { state.view = d.view }
+  else if (d.themeF) { state.theme = d.themeF }
+  else if (d.cover) { state.cover = d.cover }
+  else if (d.toggle) { state.open[d.toggle] = !state.open[d.toggle] }
+  else return
+  render()
+})
+
+document.getElementById('hanlin-src').innerHTML = tbSources.map(s => `<a href="${s.url}" target="_blank" rel="noopener" style="color: var(--ink-muted);">${s.name}</a>`).join('、')
+render()
+</script>
+
+</body></html>
