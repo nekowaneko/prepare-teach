@@ -14,7 +14,7 @@
   .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--space-4); padding: var(--space-4); max-width: 1400px; margin: 0 auto; align-items: start; }
   .stage { display: grid; gap: var(--space-3); min-width: 0; }
   .canvas-wrap { background: var(--surface-card); border-radius: var(--radius-lg); overflow: hidden; }
-  #cv { display: block; width: 100%; height: clamp(440px, 72vh, 700px); touch-action: pan-y; }
+  #cv { display: block; width: 100%; touch-action: pan-y; }
   .readouts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .panel { display: grid; gap: var(--space-3); min-width: 0; }
   .panel .sl-card { display: grid; gap: var(--space-3); padding: var(--space-4); }
@@ -38,7 +38,6 @@
   }
   @media (max-width: 560px) {
     .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    #cv { height: 460px; }
   }
 </style>
 </head>
@@ -50,7 +49,7 @@
 
 <main class="layout">
   <section class="stage" aria-label="模擬畫面">
-    <div class="canvas-wrap"><canvas id="cv" aria-label="喇叭向上發出聲波，粒子形成疏密部"></canvas></div>
+    <div class="canvas-wrap"><canvas id="cv" aria-label="喇叭在左邊向右發出聲波，粒子形成疏密部"></canvas></div>
     <div class="sl-bento readouts">
       <div class="sl-card sl-card-slate"><div class="sl-card-label">聲速</div><div class="sl-card-value" id="outV">—</div></div>
       <div class="sl-card"><div class="sl-card-label">波長</div><div class="sl-card-value" id="outLam">—</div></div>
@@ -100,8 +99,8 @@
       <div class="seg" role="group" aria-label="介質種類" id="segMedium"></div>
       <div class="field">
         <div class="field-head"><label class="sl-text-label" for="temp">溫度</label><output class="sl-text-label" id="tempOut"></output></div>
-        <input type="range" id="temp" min="-20" max="50" step="1" value="20">
-        <p class="note sl-text-caption" id="tempNote" hidden>固體的聲速受溫度影響很小，這裡固定不變。</p>
+        <input type="range" id="temp" min="-190" max="100" step="10" value="20">
+        <p class="note sl-text-caption">溫度越高，粒子自己亂動得越厲害；紅色粒子只顯示聲波造成的振動。</p>
       </div>
     </div>
 
@@ -126,33 +125,37 @@
 <script>
 (() => {
   const $ = (s) => document.querySelector(s)
-  const HM = 4 // 畫面高度代表 4 公尺
+  const HM = 4 // 介質區的長度代表 4 公尺
 
   // 聲速 v(T) 單位 m/s，密度 rho(T) 單位 kg/m³
+  // 溫度範圍 tr：取該物質維持這個狀態的邊界（熔點、沸點、液化點），往內取到 10 的倍數；氣體沒有上限，先定 100°C
   const gasRho = (rho0) => (T) => rho0 * 273.15 / (273.15 + T)
+  const gasV = (v0) => (T) => v0 * Math.sqrt((273.15 + T) / 273.15) // 室溫附近與 331 + 0.6T 相差不到 1 m/s
   const MEDIA = {
     gas: [
-      { id: 'air', name: '空氣', v: (T) => 331 + 0.6 * T, rho: gasRho(1.293), tr: [-20, 50] },
-      { id: 'he', name: '氦氣', v: (T) => 965 * Math.sqrt((273.15 + T) / 273.15), rho: gasRho(0.179), tr: [-20, 50] },
-      { id: 'co2', name: '二氧化碳', v: (T) => 259 * Math.sqrt((273.15 + T) / 273.15), rho: gasRho(1.977), tr: [-20, 50] }
+      { id: 'air', name: '空氣', v: gasV(331), rho: gasRho(1.293), tr: [-190, 100] }, // 約 -194°C 液化
+      { id: 'he', name: '氦氣', v: gasV(965), rho: gasRho(0.179), tr: [-260, 100] }, // -269°C 液化
+      { id: 'co2', name: '二氧化碳', v: gasV(259), rho: gasRho(1.977), tr: [-70, 100] } // -78.5°C 凝華
     ],
     liquid: [
-      // 純水：Marczak (1997) 多項式
+      // 純水：Marczak (1997) 多項式；0°C 凝固、100°C 沸騰
       { id: 'water', name: '水', v: (T) => 1402.385 + 5.038813 * T - 5.799136e-2 * T ** 2 + 3.287156e-4 * T ** 3 - 1.398845e-6 * T ** 4 + 2.78786e-9 * T ** 5,
-        rho: (T) => 1000 * (1 - (T + 288.9414) / (508929.2 * (T + 68.12963)) * (T - 3.9863) ** 2), tr: [0, 90] },
-      { id: 'ethanol', name: '酒精', v: (T) => 1162 - 4.0 * (T - 20), rho: (T) => 789 - 0.85 * (T - 20), tr: [0, 70] }
+        rho: (T) => 1000 * (1 - (T + 288.9414) / (508929.2 * (T + 68.12963)) * (T - 3.9863) ** 2), tr: [0, 100] },
+      // 酒精：-114°C 凝固、78°C 沸騰
+      { id: 'ethanol', name: '酒精', v: (T) => 1162 - 4.0 * (T - 20), rho: (T) => 789 - 0.85 * (T - 20), tr: [-110, 70] }
     ],
+    // 固體：下限是絕對零度；聲速先當成不隨溫度變
     solid: [
-      { id: 'iron', name: '鐵', v: () => 5130, rho: () => 7870, tr: null },
-      { id: 'al', name: '鋁', v: () => 5000, rho: () => 2700, tr: null },
-      { id: 'wood', name: '木頭', v: () => 3500, rho: () => 500, tr: null }
+      { id: 'iron', name: '鐵', v: () => 5130, rho: () => 7870, tr: [-270, 1530] }, // 1538°C 熔化
+      { id: 'al', name: '鋁', v: () => 5000, rho: () => 2700, tr: [-270, 660] }, // 660°C 熔化
+      { id: 'wood', name: '木頭', v: () => 3500, rho: () => 500, tr: [-270, 200] } // 不會熔化，約 200°C 以上開始熱分解
     ]
   }
 
   const S = {
     mode: 'cont', emitting: false, paused: false, vol: 5, f: 400, refl: true, L: 2.0,
     st: 'gas', mid: 'air', T: 20, slow: 250,
-    simT: 0, env: 0, amp: 0, phase: 0, hT: [], hV: [], h0: 0, pulses: [], lastPulse: null, echo: null
+    simT: 0, clock: 0, env: 0, amp: 0, phase: 0, hT: [], hV: [], h0: 0, pulses: [], lastPulse: null, echo: null
   }
 
   const medium = () => MEDIA[S.st].find((m) => m.id === S.mid)
@@ -259,150 +262,200 @@
     const cs = getComputedStyle(document.documentElement)
     const g = (k) => cs.getPropertyValue(k).trim()
     C = { ink: g('--ink'), muted: g('--ink-muted'), amber: g('--amber'), amberText: g('--amber-text'), line: g('--line'),
-      card: g('--surface-card'), page: g('--surface-page'), slate: g('--surface-slate'), onSlate: g('--on-slate') }
+      card: g('--surface-card'), page: g('--surface-page'), slate: g('--surface-slate'), onSlate: g('--on-slate'), danger: g('--danger') }
   }
   function layout () {
-    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1
-    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr)
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    G.W = r.width; G.H = r.height; G.narrow = G.W < 560
-    G.yTop = 44; G.yBase = G.H - (G.narrow ? 76 : 90)
-    G.ppm = (G.yBase - G.yTop) / HM
-    G.rulerX = G.narrow ? 34 : 54
-    const graphW = G.narrow ? 64 : 120, labelW = G.narrow ? 44 : 64
-    G.colX0 = G.rulerX + 10
-    G.colX1 = G.W - 12 - graphW - labelW
-    G.labelX = G.colX1 + 8
-    G.gx0 = G.colX1 + labelW; G.gx1 = G.W - 14
+    const w = cv.parentElement.clientWidth
+    G.W = w; G.narrow = w < 560
     G.font = G.narrow ? 14 : 17
+    G.x0 = G.narrow ? 58 : 88 // 左邊留給喇叭
+    G.reg = Math.round(Math.min(300, Math.max(160, w * 0.3))) // 介質區的高度，也就是短邊
+    G.cell = G.reg / 8 // 虛擬網格：正方形，邊長是短邊的八分之一（不畫出來）
+    G.cols = Math.floor((w - G.x0 - 14) / G.cell)
+    G.len = G.cols * G.cell // 介質區長度取整數格
+    G.ppm = G.len / HM
+    G.yTop = 70; G.yBot = G.yTop + G.reg
+    G.gTop = G.yBot + 66; G.gH = G.narrow ? 70 : 90; G.gMid = G.gTop + G.gH / 2
+    G.H = G.gTop + G.gH + 44
+    cv.style.height = `${G.H}px`
+    const dpr = window.devicePixelRatio || 1
+    cv.width = Math.round(G.W * dpr); cv.height = Math.round(G.H * dpr)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     makeParticles()
   }
+  // 每一格放固定數量的粒子：固體排整齊、液體稍亂、氣體隨機
   function makeParticles () {
     let seed = 7
     const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 }
-    const k = G.narrow ? 0.85 : 1
-    const sp = { gas: 16, liquid: 11, solid: 9 }[S.st] * k
-    const jit = { gas: 0.4, liquid: 0.15, solid: 0 }[S.st]
-    G.r = { gas: 3.2, liquid: 2.8, solid: 2.6 }[S.st] * k
+    const c = G.cell
+    G.r = Math.max(1.8, c * { gas: 0.1, liquid: 0.085, solid: 0.075 }[S.st])
+    const cellPts = () => {
+      const pts = []
+      if (S.st === 'solid') {
+        for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) pts.push([(i + 0.5) / 3, (j + 0.5) / 3])
+      } else if (S.st === 'liquid') {
+        for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) pts.push([(i + 0.5) / 3 + (rnd() - 0.5) * 0.2, (j + 0.5) / 2 + (rnd() - 0.5) * 0.25])
+      } else {
+        for (let k = 0; k < 3; k++) pts.push([0.1 + rnd() * 0.8, 0.1 + rnd() * 0.8])
+      }
+      return pts
+    }
     parts = []
-    for (let y = G.yBase - sp * 0.6; y > G.yTop; y -= sp) {
-      for (let x = G.colX0 + sp / 2; x < G.colX1 - sp / 3; x += sp) {
-        const px = x + (rnd() - 0.5) * 2 * jit * sp
-        const py = y + (rnd() - 0.5) * 2 * jit * sp
-        const d = (G.yBase - py) / G.ppm
-        if (d >= 0.02 && d <= HM) parts.push({ x: px, d })
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < G.cols; col++) {
+        for (const [u, v] of cellPts()) {
+          parts.push({ d: (col + u) * c / G.ppm, y: G.yTop + (row + v) * c, row,
+            ph1: rnd() * 2 * Math.PI, ph2: rnd() * 2 * Math.PI, w1: 5 + rnd() * 5, w2: 5 + rnd() * 5, red: false })
+        }
       }
     }
+    pickTracers()
+  }
+  // 紅色粒子：有反射板時在喇叭與反射板的正中間，沒有時在 2 公尺處；每一列網格挑一顆
+  function pickTracers () {
+    G.redD = S.refl ? S.L / 2 : 2
+    const best = []
+    for (const p of parts) {
+      p.red = false
+      const e = Math.abs(p.d - G.redD)
+      if (!best[p.row] || e < best[p.row].e) best[p.row] = { p, e }
+    }
+    for (const b of best) if (b) b.p.red = true
   }
   const lerpGrid = (arr, d) => {
     const u = d / GRID, i = Math.min(NG - 2, Math.max(0, Math.floor(u))), a = u - i
     return arr[i] + (arr[i + 1] - arr[i]) * a
   }
   const C_MAX = 0.8 // 最大壓縮量（無因次）
+  const font = (px, w = '') => `${w}${px}px ${getComputedStyle(document.body).fontFamily}`
   function draw () {
     for (let i = 0; i < NG; i++) gs[i] = dispAt(i * GRID)
     for (let i = 0; i < NG; i++) {
       const a = gs[Math.max(0, i - 1)], b = gs[Math.min(NG - 1, i + 1)]
       gc[i] = -(b - a) / (GRID * (i === 0 || i === NG - 1 ? 1 : 2))
     }
-    const { W, H, yBase, ppm } = G
+    const { W, H, x0, yTop, yBot, ppm } = G
+    const X = (d) => x0 + d * ppm
+    const endD = S.refl ? S.L : HM
     ctx.clearRect(0, 0, W, H)
     ctx.fillStyle = C.card; ctx.fillRect(0, 0, W, H)
-    const topD = S.refl ? S.L : HM
-    const yRef = yBase - S.L * ppm
 
     // 介質範圍
     ctx.fillStyle = C.page
-    ctx.fillRect(G.colX0, G.yTop, G.colX1 - G.colX0, yBase - G.yTop)
+    ctx.fillRect(x0, yTop, G.len, G.reg)
 
-    // 尺規
+    // 尺規（介質下方）
+    const ry = yBot + 10
     ctx.strokeStyle = C.muted; ctx.fillStyle = C.muted; ctx.lineWidth = 1.5
-    ctx.font = `${G.font - 3}px ${getComputedStyle(document.body).fontFamily}`
-    ctx.textAlign = 'right'; ctx.textBaseline = 'middle'
-    ctx.beginPath(); ctx.moveTo(G.rulerX, yBase); ctx.lineTo(G.rulerX, G.yTop); ctx.stroke()
+    ctx.font = font(G.font - 3)
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top'
+    ctx.beginPath(); ctx.moveTo(X(0), ry); ctx.lineTo(X(HM), ry); ctx.stroke()
     for (let m = 0; m <= HM + 1e-9; m += 0.5) {
-      const y = yBase - m * ppm, major = Math.abs(m - Math.round(m)) < 1e-9
-      ctx.beginPath(); ctx.moveTo(G.rulerX - (major ? 8 : 4), y); ctx.lineTo(G.rulerX, y); ctx.stroke()
-      if (major) ctx.fillText(`${m} m`, G.rulerX - 10, y)
+      const x = X(m), major = Math.abs(m - Math.round(m)) < 1e-9
+      ctx.beginPath(); ctx.moveTo(x, ry); ctx.lineTo(x, ry + (major ? 8 : 4)); ctx.stroke()
+      if (major) ctx.fillText(`${m} m`, x, ry + 11)
     }
 
-    // 粒子：依疏密分三種顏色
+    // 粒子：依疏密分三種顏色，再加上溫度造成的熱擾動
+    const tk = (S.T + 273.15) / 293.15
+    const jitter = Math.min(G.cell * { gas: 0.09, liquid: 0.05, solid: 0.03 }[S.st] * tk, G.cell * 0.14)
+    const jspeed = Math.sqrt(tk)
     const thr = 0.1
-    const groups = [[], [], []]
+    const groups = [[], [], []], reds = []
     for (const p of parts) {
       if (S.refl && p.d > S.L) continue
       const s = lerpGrid(gs, p.d), c = lerpGrid(gc, p.d)
-      groups[c > thr ? 2 : c < -thr ? 0 : 1].push(p.x, yBase - (p.d + s) * ppm)
+      const x = X(p.d + s)
+      // 紅色粒子不加熱擾動，讓學生只看到聲波造成的左右振動
+      if (p.red) { reds.push(x, p.y); continue }
+      groups[c > thr ? 2 : c < -thr ? 0 : 1].push(
+        x + jitter * Math.sin(p.w1 * jspeed * S.clock + p.ph1),
+        p.y + jitter * Math.sin(p.w2 * jspeed * S.clock + p.ph2))
+    }
+    const dots = (arr, r) => {
+      ctx.beginPath()
+      for (let i = 0; i < arr.length; i += 2) { ctx.moveTo(arr[i] + r, arr[i + 1]); ctx.arc(arr[i], arr[i + 1], r, 0, 2 * Math.PI) }
+      ctx.fill()
     }
     const fills = [C.line, C.muted, C.amber]
-    groups.forEach((arr, gi) => {
-      ctx.fillStyle = fills[gi]; ctx.beginPath()
-      for (let i = 0; i < arr.length; i += 2) { ctx.moveTo(arr[i] + G.r, arr[i + 1]); ctx.arc(arr[i], arr[i + 1], G.r, 0, 2 * Math.PI) }
-      ctx.fill()
-    })
+    groups.forEach((arr, gi) => { ctx.fillStyle = fills[gi]; dots(arr, G.r) })
+
+    // 紅色粒子的平衡位置（虛線）與粒子本身
+    if (G.redD <= endD) {
+      ctx.strokeStyle = C.danger; ctx.lineWidth = 1.5; ctx.setLineDash([5, 5])
+      ctx.beginPath(); ctx.moveTo(X(G.redD), yTop - 6); ctx.lineTo(X(G.redD), yBot + 6); ctx.stroke()
+      ctx.setLineDash([])
+      ctx.fillStyle = C.danger; dots(reds, G.r * 1.6)
+    }
 
     // 反射板
     if (S.refl) {
+      const xr = X(S.L)
       ctx.fillStyle = C.line
-      ctx.fillRect(G.colX0, G.yTop, G.colX1 - G.colX0, yRef - G.yTop)
+      ctx.fillRect(xr, yTop, X(HM) - xr, G.reg)
       ctx.fillStyle = C.slate
-      ctx.fillRect(G.colX0 - 4, yRef - 10, G.colX1 - G.colX0 + 8, 10)
-      ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'
-      ctx.font = `500 ${G.font}px ${getComputedStyle(document.body).fontFamily}`
-      if (yRef - G.yTop > 30) ctx.fillText('反射板', (G.colX0 + G.colX1) / 2, yRef - 14)
+      ctx.fillRect(xr, yTop - 8, 10, G.reg + 16)
+      ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.font = font(G.font, '500 ')
+      ctx.fillText('反射板', Math.min(xr + 5, W - G.font * 1.8), 22)
     }
 
-    // 疏部、密部標示
-    ctx.font = `500 ${G.font}px ${getComputedStyle(document.body).fontFamily}`
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
-    let lastY = Infinity
-    const labThr = 0.12
-    for (let i = 2; i < NG - 2 && i * GRID < topD - 0.05; i++) {
+    // 疏部、密部標示（介質上方）
+    ctx.font = font(G.font, '500 ')
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'
+    const labThr = 0.12, gap = G.font * 2.6
+    let labs = []
+    for (let i = 2; i < NG - 2 && i * GRID < endD - 0.05; i++) {
       const c = gc[i]
       const isMax = c > labThr && c >= gc[i - 1] && c > gc[i + 1]
       const isMin = c < -labThr && c <= gc[i - 1] && c < gc[i + 1]
-      if (!isMax && !isMin) continue
-      const y = yBase - (i * GRID + gs[i]) * ppm
-      if (Math.abs(lastY - y) < G.font + 6) continue
-      ctx.fillStyle = isMax ? C.amberText : C.muted
-      ctx.fillText(isMax ? '密部' : '疏部', G.labelX, y)
-      lastY = y
+      if (isMax || isMin) labs.push({ x: X(i * GRID + gs[i]), dense: isMax })
+    }
+    // 太擠時只標密部，避免跳過一個標示後出現兩個「疏部」相鄰
+    if (labs.some((l, k) => k > 0 && l.x - labs[k - 1].x < gap)) labs = labs.filter((l) => l.dense)
+    let lastX = -Infinity
+    for (const l of labs) {
+      if (l.x - lastX < gap) continue
+      ctx.fillStyle = l.dense ? C.amberText : C.muted
+      ctx.fillText(l.dense ? '密部' : '疏部', l.x, yTop - 12)
+      lastX = l.x
     }
 
-    // 疏密變化曲線
-    const gm = (G.gx0 + G.gx1) / 2, gh = (G.gx1 - G.gx0) / 2
+    // 疏密變化曲線（介質下方，對齊同一個位置）
+    const { gTop, gH, gMid } = G
     ctx.strokeStyle = C.line; ctx.lineWidth = 1.5
-    ctx.beginPath(); ctx.moveTo(gm, yBase); ctx.lineTo(gm, G.yTop); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(X(0), gMid); ctx.lineTo(X(HM), gMid); ctx.stroke()
     ctx.strokeStyle = C.amber; ctx.lineWidth = 2.5; ctx.beginPath()
-    for (let i = 0; i < NG && i * GRID <= topD; i++) {
-      const x = gm + Math.max(-1, Math.min(1, gc[i] / C_MAX)) * gh, y = yBase - i * GRID * ppm
+    for (let i = 0; i < NG && i * GRID <= endD; i++) {
+      const x = X(i * GRID), y = gMid - Math.max(-1, Math.min(1, gc[i] / C_MAX)) * gH / 2
       if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
     }
     ctx.stroke()
-    ctx.fillStyle = C.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'top'
-    ctx.font = `${G.font - 3}px ${getComputedStyle(document.body).fontFamily}`
-    ctx.fillText('疏', G.gx0 + 8, yBase + 8); ctx.fillText('密', G.gx1 - 8, yBase + 8)
-    ctx.textBaseline = 'bottom'; ctx.fillText('疏密變化', gm, G.yTop - 6)
+    ctx.fillStyle = C.muted; ctx.font = font(G.font - 3)
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle'
+    ctx.fillText('密', x0 - 10, gTop + 6); ctx.fillText('疏', x0 - 10, gTop + gH - 6)
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'
+    ctx.fillText('疏密變化', X(0), gTop - 4)
 
-    // 喇叭（向上）
-    const cx = (G.colX0 + G.colX1) / 2, sw = Math.min(150, (G.colX1 - G.colX0) * 0.55)
-    const dia = yBase + 4 - gs[0] * ppm
+    // 喇叭（在左邊，朝右）
+    const cy = (yTop + yBot) / 2, sh = Math.min(150, G.reg * 0.6), depth = G.narrow ? 26 : 38
+    const dia = x0 - 2 + gs[0] * ppm
     ctx.fillStyle = C.slate
     ctx.beginPath()
-    ctx.moveTo(cx - sw / 2, dia); ctx.lineTo(cx + sw / 2, dia)
-    ctx.lineTo(cx + sw / 6, yBase + 36); ctx.lineTo(cx - sw / 6, yBase + 36); ctx.closePath(); ctx.fill()
-    ctx.fillRect(cx - sw / 4, yBase + 36, sw / 2, 16)
+    ctx.moveTo(dia, cy - sh / 2); ctx.lineTo(dia, cy + sh / 2)
+    ctx.lineTo(x0 - depth, cy + sh / 6); ctx.lineTo(x0 - depth, cy - sh / 6); ctx.closePath(); ctx.fill()
+    ctx.fillRect(x0 - depth - (G.narrow ? 10 : 16), cy - sh / 4, G.narrow ? 10 : 16, sh / 2)
     ctx.strokeStyle = C.amber; ctx.lineWidth = 4
-    ctx.beginPath(); ctx.moveTo(cx - sw / 2, dia); ctx.lineTo(cx + sw / 2, dia); ctx.stroke()
-    ctx.fillStyle = C.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
-    ctx.font = `500 ${G.font}px ${getComputedStyle(document.body).fontFamily}`
-    ctx.fillText('喇叭', cx + sw / 2 + 10, yBase + 30)
+    ctx.beginPath(); ctx.moveTo(dia, cy - sh / 2); ctx.lineTo(dia, cy + sh / 2); ctx.stroke()
+    ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'top'
+    ctx.font = font(G.font, '500 ')
+    ctx.fillText('喇叭', x0 - depth / 2 - 6, cy + sh / 2 + 8)
 
-    // 上方狀態列
+    // 狀態列（最下方）
     ctx.fillStyle = C.muted; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
-    ctx.font = `${G.font - 2}px ${getComputedStyle(document.body).fontFamily}`
+    ctx.font = font(G.font - 2)
     const since = S.lastPulse ? `　發出後 ${((S.simT - S.lastPulse.t0) * 1000).toFixed(1)} ms` : ''
-    ctx.fillText(`${medium().name}　畫面慢 ${S.slow} 倍${since}${S.paused ? '　已暫停' : ''}`, 12, 22)
+    ctx.fillText(`${medium().name} ${S.T}°C　畫面慢 ${S.slow} 倍${since}${S.paused ? '　已暫停' : ''}`, 12, H - 18)
   }
 
   // ---------- 讀數 ----------
@@ -431,10 +484,10 @@
     $('#dist').disabled = !S.refl
     const m = medium()
     const t = $('#temp')
-    $('#tempNote').hidden = !!m.tr
-    t.disabled = !m.tr
-    if (m.tr) { t.min = m.tr[0]; t.max = m.tr[1]; S.T = Math.min(m.tr[1], Math.max(m.tr[0], S.T)); t.value = S.T }
-    $('#tempOut').value = m.tr ? `${S.T} °C` : '—'
+    t.min = m.tr[0]; t.max = m.tr[1]
+    S.T = Math.round(Math.min(m.tr[1], Math.max(m.tr[0], S.T)) / 10) * 10
+    t.value = S.T
+    $('#tempOut').value = `${S.T} °C`
     document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.mode === S.mode))
     document.querySelectorAll('[data-st]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.st === S.st))
     document.querySelectorAll('[data-slow]').forEach((b) => b.setAttribute('aria-pressed', +b.dataset.slow === S.slow))
@@ -455,8 +508,8 @@
   $('#btnClear').addEventListener('click', () => { S.emitting = false; resetWave(); syncControls() })
   $('#vol').addEventListener('input', (e) => { S.vol = +e.target.value; syncControls() })
   $('#freq').addEventListener('input', (e) => { S.f = +e.target.value; syncControls() })
-  $('#refl').addEventListener('change', (e) => { S.refl = e.target.checked; S.echo = null; syncControls() })
-  $('#dist').addEventListener('input', (e) => { S.L = +e.target.value; S.echo = null; syncControls() })
+  $('#refl').addEventListener('change', (e) => { S.refl = e.target.checked; S.echo = null; pickTracers(); syncControls() })
+  $('#dist').addEventListener('input', (e) => { S.L = +e.target.value; S.echo = null; pickTracers(); syncControls() })
   $('#temp').addEventListener('input', (e) => { S.T = +e.target.value; resetWave(); syncControls() })
   document.querySelectorAll('[data-st]').forEach((b) => b.addEventListener('click', () => {
     if (S.st === b.dataset.st) return
@@ -476,7 +529,7 @@
   function frame (ts) {
     const dt = lastTs === null ? 0 : Math.min(0.05, (ts - lastTs) / 1000)
     lastTs = ts
-    if (!S.paused && dt > 0) { advance(dt / S.slow); checkTasks() }
+    if (!S.paused && dt > 0) { S.clock += dt; advance(dt / S.slow); checkTasks() }
     draw(); updateReadouts()
     requestAnimationFrame(frame)
   }
@@ -489,7 +542,7 @@
 
   // 給之後的學習單與測試用
   window.soundSim = {
-    state: S, speed, lambda, density, dispAt, advance, emitPulse, resetWave, done,
+    state: S, tracers: () => parts.filter((p) => p.red).map((p) => p.d), speed, lambda, density, dispAt, advance, emitPulse, resetWave, done,
     tasks: TASKS.map((t) => t.id)
   }
 })()
