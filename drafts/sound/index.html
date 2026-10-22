@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>聲音的形成與應用（模擬草稿）</title>
+<link rel="stylesheet" href="../../design/tokens.css">
+<link rel="stylesheet" href="../../design/components.css">
+<style>
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  .top { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; padding: var(--space-4) var(--space-4) 0; max-width: 1400px; margin: 0 auto; }
+  .top h1 { margin: 0; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--space-4); padding: var(--space-4); max-width: 1400px; margin: 0 auto; align-items: start; }
+  .stage { display: grid; gap: var(--space-3); min-width: 0; }
+  .canvas-wrap { background: var(--surface-card); border-radius: var(--radius-lg); overflow: hidden; }
+  #cv { display: block; width: 100%; height: clamp(440px, 72vh, 700px); touch-action: pan-y; }
+  .readouts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .panel { display: grid; gap: var(--space-3); min-width: 0; }
+  .panel .sl-card { display: grid; gap: var(--space-3); padding: var(--space-4); }
+  .panel h2 { margin: 0; }
+  .seg { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .seg .sl-btn[aria-pressed="true"] { background: var(--amber-soft); border-color: var(--amber); color: var(--amber-text); }
+  .field { display: grid; gap: var(--space-1); }
+  .field-head { display: flex; justify-content: space-between; gap: var(--space-2); }
+  .field-head output { color: var(--amber-text); }
+  input[type="range"] { width: 100%; margin: 0; height: 28px; accent-color: var(--amber); }
+  input[type="range"]:disabled { opacity: .4; }
+  .check { display: flex; gap: var(--space-2); align-items: center; }
+  .check input { width: 18px; height: 18px; accent-color: var(--amber); margin: 0; }
+  .note { margin: 0; color: var(--ink-muted); }
+  .tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+  .tasks li { display: flex; justify-content: space-between; gap: var(--space-2); align-items: flex-start; }
+  .tasks .sl-badge { flex: none; }
+  .actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #cv { height: 460px; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1 class="sl-text-title">聲音的形成與應用</h1>
+  <span class="sl-badge sl-badge-amber">模擬草稿</span>
+</header>
+
+<main class="layout">
+  <section class="stage" aria-label="模擬畫面">
+    <div class="canvas-wrap"><canvas id="cv" aria-label="喇叭向上發出聲波，粒子形成疏密部"></canvas></div>
+    <div class="sl-bento readouts">
+      <div class="sl-card sl-card-slate"><div class="sl-card-label">聲速</div><div class="sl-card-value" id="outV">—</div></div>
+      <div class="sl-card"><div class="sl-card-label">波長</div><div class="sl-card-value" id="outLam">—</div></div>
+      <div class="sl-card"><div class="sl-card-label">介質密度</div><div class="sl-card-value" id="outRho">—</div></div>
+      <div class="sl-card"><div class="sl-card-label">回聲時間</div><div class="sl-card-value" id="outEcho">—</div></div>
+    </div>
+  </section>
+
+  <aside class="panel" aria-label="控制板">
+    <div class="sl-card">
+      <h2 class="sl-text-label">聲源</h2>
+      <div class="seg" role="group" aria-label="聲音種類">
+        <button class="sl-btn" data-mode="cont" aria-pressed="true">連續聲</button>
+        <button class="sl-btn" data-mode="pulse" aria-pressed="false">單一聲響</button>
+      </div>
+      <div class="field">
+        <div class="field-head"><label class="sl-text-label" for="vol">音量</label><output class="sl-text-label" id="volOut"></output></div>
+        <input type="range" id="vol" min="1" max="10" step="1" value="5">
+      </div>
+      <div class="field">
+        <div class="field-head"><label class="sl-text-label" for="freq">頻率</label><output class="sl-text-label" id="freqOut"></output></div>
+        <input type="range" id="freq" min="100" max="1000" step="10" value="400">
+      </div>
+      <div class="actions">
+        <button class="sl-btn sl-btn-primary" id="btnMain">播放聲音</button>
+        <button class="sl-btn" id="btnPause">暫停畫面</button>
+        <button class="sl-btn" id="btnClear">清除波形</button>
+      </div>
+    </div>
+
+    <div class="sl-card">
+      <h2 class="sl-text-label">反射</h2>
+      <label class="check sl-text-body"><input type="checkbox" id="refl" checked>放反射板</label>
+      <div class="field">
+        <div class="field-head"><label class="sl-text-label" for="dist">反射板與喇叭的距離</label><output class="sl-text-label" id="distOut"></output></div>
+        <input type="range" id="dist" min="0.5" max="3.8" step="0.1" value="2.0">
+      </div>
+    </div>
+
+    <div class="sl-card">
+      <h2 class="sl-text-label">介質</h2>
+      <div class="seg" role="group" aria-label="介質狀態" id="segState">
+        <button class="sl-btn" data-st="gas" aria-pressed="true">氣體</button>
+        <button class="sl-btn" data-st="liquid" aria-pressed="false">液體</button>
+        <button class="sl-btn" data-st="solid" aria-pressed="false">固體</button>
+      </div>
+      <div class="seg" role="group" aria-label="介質種類" id="segMedium"></div>
+      <div class="field">
+        <div class="field-head"><label class="sl-text-label" for="temp">溫度</label><output class="sl-text-label" id="tempOut"></output></div>
+        <input type="range" id="temp" min="-20" max="50" step="1" value="20">
+        <p class="note sl-text-caption" id="tempNote" hidden>固體的聲速受溫度影響很小，這裡固定不變。</p>
+      </div>
+    </div>
+
+    <div class="sl-card">
+      <h2 class="sl-text-label">播放速度</h2>
+      <div class="seg" role="group" aria-label="播放速度" id="segSlow">
+        <button class="sl-btn" data-slow="250" aria-pressed="true">慢 250 倍</button>
+        <button class="sl-btn" data-slow="1000" aria-pressed="false">慢 1000 倍</button>
+        <button class="sl-btn" data-slow="4000" aria-pressed="false">慢 4000 倍</button>
+      </div>
+      <p class="note sl-text-caption">真實的聲音太快，畫面放慢播放；粒子的位移也放大了。</p>
+    </div>
+
+    <div class="sl-card">
+      <h2 class="sl-text-label">動手任務</h2>
+      <ul class="tasks sl-text-body" id="tasks"></ul>
+      <div class="actions"><button class="sl-btn" id="btnTaskReset">重設任務</button></div>
+    </div>
+  </aside>
+</main>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s)
+  const HM = 4 // 畫面高度代表 4 公尺
+
+  // 聲速 v(T) 單位 m/s，密度 rho(T) 單位 kg/m³
+  const gasRho = (rho0) => (T) => rho0 * 273.15 / (273.15 + T)
+  const MEDIA = {
+    gas: [
+      { id: 'air', name: '空氣', v: (T) => 331 + 0.6 * T, rho: gasRho(1.293), tr: [-20, 50] },
+      { id: 'he', name: '氦氣', v: (T) => 965 * Math.sqrt((273.15 + T) / 273.15), rho: gasRho(0.179), tr: [-20, 50] },
+      { id: 'co2', name: '二氧化碳', v: (T) => 259 * Math.sqrt((273.15 + T) / 273.15), rho: gasRho(1.977), tr: [-20, 50] }
+    ],
+    liquid: [
+      // 純水：Marczak (1997) 多項式
+      { id: 'water', name: '水', v: (T) => 1402.385 + 5.038813 * T - 5.799136e-2 * T ** 2 + 3.287156e-4 * T ** 3 - 1.398845e-6 * T ** 4 + 2.78786e-9 * T ** 5,
+        rho: (T) => 1000 * (1 - (T + 288.9414) / (508929.2 * (T + 68.12963)) * (T - 3.9863) ** 2), tr: [0, 90] },
+      { id: 'ethanol', name: '酒精', v: (T) => 1162 - 4.0 * (T - 20), rho: (T) => 789 - 0.85 * (T - 20), tr: [0, 70] }
+    ],
+    solid: [
+      { id: 'iron', name: '鐵', v: () => 5130, rho: () => 7870, tr: null },
+      { id: 'al', name: '鋁', v: () => 5000, rho: () => 2700, tr: null },
+      { id: 'wood', name: '木頭', v: () => 3500, rho: () => 500, tr: null }
+    ]
+  }
+
+  const S = {
+    mode: 'cont', emitting: false, paused: false, vol: 5, f: 400, refl: true, L: 2.0,
+    st: 'gas', mid: 'air', T: 20, slow: 250,
+    simT: 0, env: 0, amp: 0, phase: 0, hT: [], hV: [], h0: 0, pulses: [], lastPulse: null, echo: null
+  }
+
+  const medium = () => MEDIA[S.st].find((m) => m.id === S.mid)
+  const speed = () => medium().v(S.T)
+  const density = () => medium().rho(S.T)
+  const lambda = () => speed() / S.f
+  // 位移振幅（公尺，畫面上誇大）：讓疏密程度隨音量變化，但粒子不互相穿越
+  const ampAt = (f) => Math.min(S.vol / 10 * 0.8 * (speed() / f) / (2 * Math.PI), S.vol * 0.017)
+
+  // ---------- 任務（成功判定） ----------
+  const TASKS = [
+    { id: 'wavelength', text: '在空氣中讓波長小於 0.5 公尺', check: () => S.mid === 'air' && S.mode === 'cont' && S.env > 0.9 && lambda() < 0.5 },
+    { id: 'echo', text: '讓回聲在 5 毫秒內回到喇叭', check: () => S.echo !== null && S.echo < 0.005 },
+    { id: 'fast', text: '找一種聲速超過 1400 m/s 的介質，並發出聲音', check: () => speed() > 1400 && soundInColumn() },
+    { id: 'warm', text: '只調溫度，讓空氣的聲速超過 350 m/s', check: () => S.mid === 'air' && speed() > 350 }
+  ]
+  const done = {}
+  function soundInColumn () {
+    if (S.env > 0.5) return true
+    return S.lastPulse !== null && S.simT - S.lastPulse.t0 < HM / speed()
+  }
+  function renderTasks () {
+    $('#tasks').innerHTML = TASKS.map((t) =>
+      `<li><span>${t.text}</span><span class="sl-badge ${done[t.id] ? 'sl-badge-success' : ''}">${done[t.id] ? '完成' : '未完成'}</span></li>`).join('')
+  }
+  function checkTasks () {
+    let changed = false
+    for (const t of TASKS) {
+      if (!done[t.id] && t.check()) {
+        done[t.id] = true; changed = true
+        document.dispatchEvent(new CustomEvent('sim:success', { detail: { id: t.id, v: speed(), f: S.f, lambda: lambda(), echo: S.echo } }))
+      }
+    }
+    if (changed) renderTasks()
+  }
+
+  // ---------- 聲源歷史：讓改頻率、音量時，舊的波照原樣往外傳 ----------
+  function resetWave () {
+    S.hT = []; S.hV = []; S.h0 = 0; S.pulses = []; S.lastPulse = null; S.echo = null; S.env = 0
+  }
+  function srcAt (tau) {
+    const t = S.hT, n = t.length
+    if (n === 0 || tau < t[S.h0]) return 0
+    if (tau >= t[n - 1]) return S.hV[n - 1]
+    let lo = S.h0, hi = n - 1
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (t[m] <= tau) lo = m; else hi = m }
+    const a = (tau - t[lo]) / (t[hi] - t[lo])
+    return S.hV[lo] + (S.hV[hi] - S.hV[lo]) * a
+  }
+  // 距喇叭 d 公尺處的粒子位移（向上為正）。反射板是硬牆：反射波位移反相，牆面位移為零
+  function dispAt (d) {
+    const v = speed()
+    if (S.refl && d > S.L) return 0
+    let s = srcAt(S.simT - d / v)
+    if (S.refl) s -= srcAt(S.simT - (2 * S.L - d) / v)
+    return s
+  }
+  function advance (dtReal) {
+    const n = Math.max(1, Math.ceil(dtReal * S.f * 24))
+    const h = dtReal / n
+    const target = S.mode === 'cont' && S.emitting ? 1 : 0
+    const v = speed()
+    for (let i = 0; i < n; i++) {
+      S.simT += h
+      const dEnv = target - S.env
+      S.env += Math.sign(dEnv) * Math.min(Math.abs(dEnv), h * S.f / 2)
+      S.phase = (S.phase + 2 * Math.PI * S.f * h) % (2 * Math.PI)
+      // 振幅慢慢跟上，避免改頻率、音量時位移突然跳動
+      S.amp += (ampAt(S.f) - S.amp) * Math.min(1, h * S.f)
+      let val = S.env * S.amp * Math.sin(S.phase)
+      for (const p of S.pulses) {
+        const tau = S.simT - p.t0
+        if (tau >= 0 && tau <= p.dur) val += p.A * Math.sin(2 * Math.PI * p.f * tau) * Math.sin(Math.PI * tau / p.dur) ** 2
+      }
+      S.hT.push(S.simT); S.hV.push(val)
+    }
+    // 回聲：聲響的波前回到喇叭
+    if (S.refl) {
+      for (const p of S.pulses) {
+        if (!p.echoed && S.simT >= p.t0 + 2 * S.L / v) { p.echoed = true; S.echo = 2 * S.L / v }
+      }
+    }
+    // 丟掉已經傳出畫面的歷史
+    const keep = S.simT - 2 * HM / v - 0.02
+    while (S.h0 < S.hT.length - 2 && S.hT[S.h0] < keep) S.h0++
+    if (S.h0 > 5000) { S.hT.splice(0, S.h0); S.hV.splice(0, S.h0); S.h0 = 0 }
+    S.pulses = S.pulses.filter((p) => S.simT - p.t0 < p.dur + 2 * HM / v)
+  }
+  function emitPulse () {
+    const p = { t0: S.simT, dur: 2 / S.f, f: S.f, A: ampAt(S.f), echoed: false }
+    S.pulses.push(p); S.lastPulse = p; S.echo = null
+  }
+
+  // ---------- 畫面 ----------
+  const cv = $('#cv'), ctx = cv.getContext('2d')
+  const G = {}
+  let C = {}
+  let parts = []
+  const GRID = 0.01 // 每 1 公分算一次位移
+  const NG = Math.round(HM / GRID) + 1
+  const gs = new Float64Array(NG), gc = new Float64Array(NG)
+
+  function readColors () {
+    const cs = getComputedStyle(document.documentElement)
+    const g = (k) => cs.getPropertyValue(k).trim()
+    C = { ink: g('--ink'), muted: g('--ink-muted'), amber: g('--amber'), amberText: g('--amber-text'), line: g('--line'),
+      card: g('--surface-card'), page: g('--surface-page'), slate: g('--surface-slate'), onSlate: g('--on-slate') }
+  }
+  function layout () {
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    G.W = r.width; G.H = r.height; G.narrow = G.W < 560
+    G.yTop = 44; G.yBase = G.H - (G.narrow ? 76 : 90)
+    G.ppm = (G.yBase - G.yTop) / HM
+    G.rulerX = G.narrow ? 34 : 54
+    const graphW = G.narrow ? 64 : 120, labelW = G.narrow ? 44 : 64
+    G.colX0 = G.rulerX + 10
+    G.colX1 = G.W - 12 - graphW - labelW
+    G.labelX = G.colX1 + 8
+    G.gx0 = G.colX1 + labelW; G.gx1 = G.W - 14
+    G.font = G.narrow ? 14 : 17
+    makeParticles()
+  }
+  function makeParticles () {
+    let seed = 7
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 }
+    const k = G.narrow ? 0.85 : 1
+    const sp = { gas: 16, liquid: 11, solid: 9 }[S.st] * k
+    const jit = { gas: 0.4, liquid: 0.15, solid: 0 }[S.st]
+    G.r = { gas: 3.2, liquid: 2.8, solid: 2.6 }[S.st] * k
+    parts = []
+    for (let y = G.yBase - sp * 0.6; y > G.yTop; y -= sp) {
+      for (let x = G.colX0 + sp / 2; x < G.colX1 - sp / 3; x += sp) {
+        const px = x + (rnd() - 0.5) * 2 * jit * sp
+        const py = y + (rnd() - 0.5) * 2 * jit * sp
+        const d = (G.yBase - py) / G.ppm
+        if (d >= 0.02 && d <= HM) parts.push({ x: px, d })
+      }
+    }
+  }
+  const lerpGrid = (arr, d) => {
+    const u = d / GRID, i = Math.min(NG - 2, Math.max(0, Math.floor(u))), a = u - i
+    return arr[i] + (arr[i + 1] - arr[i]) * a
+  }
+  const C_MAX = 0.8 // 最大壓縮量（無因次）
+  function draw () {
+    for (let i = 0; i < NG; i++) gs[i] = dispAt(i * GRID)
+    for (let i = 0; i < NG; i++) {
+      const a = gs[Math.max(0, i - 1)], b = gs[Math.min(NG - 1, i + 1)]
+      gc[i] = -(b - a) / (GRID * (i === 0 || i === NG - 1 ? 1 : 2))
+    }
+    const { W, H, yBase, ppm } = G
+    ctx.clearRect(0, 0, W, H)
+    ctx.fillStyle = C.card; ctx.fillRect(0, 0, W, H)
+    const topD = S.refl ? S.L : HM
+    const yRef = yBase - S.L * ppm
+
+    // 介質範圍
+    ctx.fillStyle = C.page
+    ctx.fillRect(G.colX0, G.yTop, G.colX1 - G.colX0, yBase - G.yTop)
+
+    // 尺規
+    ctx.strokeStyle = C.muted; ctx.fillStyle = C.muted; ctx.lineWidth = 1.5
+    ctx.font = `${G.font - 3}px ${getComputedStyle(document.body).fontFamily}`
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle'
+    ctx.beginPath(); ctx.moveTo(G.rulerX, yBase); ctx.lineTo(G.rulerX, G.yTop); ctx.stroke()
+    for (let m = 0; m <= HM + 1e-9; m += 0.5) {
+      const y = yBase - m * ppm, major = Math.abs(m - Math.round(m)) < 1e-9
+      ctx.beginPath(); ctx.moveTo(G.rulerX - (major ? 8 : 4), y); ctx.lineTo(G.rulerX, y); ctx.stroke()
+      if (major) ctx.fillText(`${m} m`, G.rulerX - 10, y)
+    }
+
+    // 粒子：依疏密分三種顏色
+    const thr = 0.1
+    const groups = [[], [], []]
+    for (const p of parts) {
+      if (S.refl && p.d > S.L) continue
+      const s = lerpGrid(gs, p.d), c = lerpGrid(gc, p.d)
+      groups[c > thr ? 2 : c < -thr ? 0 : 1].push(p.x, yBase - (p.d + s) * ppm)
+    }
+    const fills = [C.line, C.muted, C.amber]
+    groups.forEach((arr, gi) => {
+      ctx.fillStyle = fills[gi]; ctx.beginPath()
+      for (let i = 0; i < arr.length; i += 2) { ctx.moveTo(arr[i] + G.r, arr[i + 1]); ctx.arc(arr[i], arr[i + 1], G.r, 0, 2 * Math.PI) }
+      ctx.fill()
+    })
+
+    // 反射板
+    if (S.refl) {
+      ctx.fillStyle = C.line
+      ctx.fillRect(G.colX0, G.yTop, G.colX1 - G.colX0, yRef - G.yTop)
+      ctx.fillStyle = C.slate
+      ctx.fillRect(G.colX0 - 4, yRef - 10, G.colX1 - G.colX0 + 8, 10)
+      ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'
+      ctx.font = `500 ${G.font}px ${getComputedStyle(document.body).fontFamily}`
+      if (yRef - G.yTop > 30) ctx.fillText('反射板', (G.colX0 + G.colX1) / 2, yRef - 14)
+    }
+
+    // 疏部、密部標示
+    ctx.font = `500 ${G.font}px ${getComputedStyle(document.body).fontFamily}`
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+    let lastY = Infinity
+    const labThr = 0.12
+    for (let i = 2; i < NG - 2 && i * GRID < topD - 0.05; i++) {
+      const c = gc[i]
+      const isMax = c > labThr && c >= gc[i - 1] && c > gc[i + 1]
+      const isMin = c < -labThr && c <= gc[i - 1] && c < gc[i + 1]
+      if (!isMax && !isMin) continue
+      const y = yBase - (i * GRID + gs[i]) * ppm
+      if (Math.abs(lastY - y) < G.font + 6) continue
+      ctx.fillStyle = isMax ? C.amberText : C.muted
+      ctx.fillText(isMax ? '密部' : '疏部', G.labelX, y)
+      lastY = y
+    }
+
+    // 疏密變化曲線
+    const gm = (G.gx0 + G.gx1) / 2, gh = (G.gx1 - G.gx0) / 2
+    ctx.strokeStyle = C.line; ctx.lineWidth = 1.5
+    ctx.beginPath(); ctx.moveTo(gm, yBase); ctx.lineTo(gm, G.yTop); ctx.stroke()
+    ctx.strokeStyle = C.amber; ctx.lineWidth = 2.5; ctx.beginPath()
+    for (let i = 0; i < NG && i * GRID <= topD; i++) {
+      const x = gm + Math.max(-1, Math.min(1, gc[i] / C_MAX)) * gh, y = yBase - i * GRID * ppm
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+    }
+    ctx.stroke()
+    ctx.fillStyle = C.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'top'
+    ctx.font = `${G.font - 3}px ${getComputedStyle(document.body).fontFamily}`
+    ctx.fillText('疏', G.gx0 + 8, yBase + 8); ctx.fillText('密', G.gx1 - 8, yBase + 8)
+    ctx.textBaseline = 'bottom'; ctx.fillText('疏密變化', gm, G.yTop - 6)
+
+    // 喇叭（向上）
+    const cx = (G.colX0 + G.colX1) / 2, sw = Math.min(150, (G.colX1 - G.colX0) * 0.55)
+    const dia = yBase + 4 - gs[0] * ppm
+    ctx.fillStyle = C.slate
+    ctx.beginPath()
+    ctx.moveTo(cx - sw / 2, dia); ctx.lineTo(cx + sw / 2, dia)
+    ctx.lineTo(cx + sw / 6, yBase + 36); ctx.lineTo(cx - sw / 6, yBase + 36); ctx.closePath(); ctx.fill()
+    ctx.fillRect(cx - sw / 4, yBase + 36, sw / 2, 16)
+    ctx.strokeStyle = C.amber; ctx.lineWidth = 4
+    ctx.beginPath(); ctx.moveTo(cx - sw / 2, dia); ctx.lineTo(cx + sw / 2, dia); ctx.stroke()
+    ctx.fillStyle = C.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+    ctx.font = `500 ${G.font}px ${getComputedStyle(document.body).fontFamily}`
+    ctx.fillText('喇叭', cx + sw / 2 + 10, yBase + 30)
+
+    // 上方狀態列
+    ctx.fillStyle = C.muted; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+    ctx.font = `${G.font - 2}px ${getComputedStyle(document.body).fontFamily}`
+    const since = S.lastPulse ? `　發出後 ${((S.simT - S.lastPulse.t0) * 1000).toFixed(1)} ms` : ''
+    ctx.fillText(`${medium().name}　畫面慢 ${S.slow} 倍${since}${S.paused ? '　已暫停' : ''}`, 12, 22)
+  }
+
+  // ---------- 讀數 ----------
+  const fmt = (x, n) => x.toFixed(n)
+  let lastOut = ''
+  function updateReadouts () {
+    const v = speed(), lam = lambda(), rho = density()
+    const vals = [
+      `${fmt(v, 0)} m/s`,
+      lam > HM ? `${fmt(lam, 1)} m` : `${fmt(lam, 2)} m`,
+      rho < 10 ? `${fmt(rho, 2)} kg/m³` : `${fmt(rho, 0)} kg/m³`,
+      S.echo === null ? '—' : `${fmt(S.echo * 1000, 2)} ms`
+    ]
+    const key = vals.join('|')
+    if (key === lastOut) return
+    lastOut = key
+    $('#outV').textContent = vals[0]; $('#outLam').textContent = vals[1]
+    $('#outRho').textContent = vals[2]; $('#outEcho').textContent = vals[3]
+  }
+
+  // ---------- 控制板 ----------
+  function syncControls () {
+    $('#volOut').value = `${S.vol}`
+    $('#freqOut').value = `${S.f} Hz`
+    $('#distOut').value = `${S.L.toFixed(1)} m`
+    $('#dist').disabled = !S.refl
+    const m = medium()
+    const t = $('#temp')
+    $('#tempNote').hidden = !!m.tr
+    t.disabled = !m.tr
+    if (m.tr) { t.min = m.tr[0]; t.max = m.tr[1]; S.T = Math.min(m.tr[1], Math.max(m.tr[0], S.T)); t.value = S.T }
+    $('#tempOut').value = m.tr ? `${S.T} °C` : '—'
+    document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.mode === S.mode))
+    document.querySelectorAll('[data-st]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.st === S.st))
+    document.querySelectorAll('[data-slow]').forEach((b) => b.setAttribute('aria-pressed', +b.dataset.slow === S.slow))
+    $('#segMedium').innerHTML = MEDIA[S.st].map((x) =>
+      `<button class="sl-btn" data-mid="${x.id}" aria-pressed="${x.id === S.mid}">${x.name}</button>`).join('')
+    $('#btnMain').textContent = S.mode === 'pulse' ? '發出聲響' : S.emitting ? '停止聲音' : '播放聲音'
+    $('#btnPause').textContent = S.paused ? '繼續畫面' : '暫停畫面'
+  }
+
+  document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => {
+    S.mode = b.dataset.mode; S.emitting = false; syncControls()
+  }))
+  $('#btnMain').addEventListener('click', () => {
+    if (S.mode === 'pulse') emitPulse(); else S.emitting = !S.emitting
+    S.paused = false; syncControls()
+  })
+  $('#btnPause').addEventListener('click', () => { S.paused = !S.paused; syncControls() })
+  $('#btnClear').addEventListener('click', () => { S.emitting = false; resetWave(); syncControls() })
+  $('#vol').addEventListener('input', (e) => { S.vol = +e.target.value; syncControls() })
+  $('#freq').addEventListener('input', (e) => { S.f = +e.target.value; syncControls() })
+  $('#refl').addEventListener('change', (e) => { S.refl = e.target.checked; S.echo = null; syncControls() })
+  $('#dist').addEventListener('input', (e) => { S.L = +e.target.value; S.echo = null; syncControls() })
+  $('#temp').addEventListener('input', (e) => { S.T = +e.target.value; resetWave(); syncControls() })
+  document.querySelectorAll('[data-st]').forEach((b) => b.addEventListener('click', () => {
+    if (S.st === b.dataset.st) return
+    S.st = b.dataset.st; S.mid = MEDIA[S.st][0].id
+    resetWave(); makeParticles(); syncControls()
+  }))
+  $('#segMedium').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mid]')
+    if (!b || b.dataset.mid === S.mid) return
+    S.mid = b.dataset.mid; resetWave(); syncControls()
+  })
+  document.querySelectorAll('[data-slow]').forEach((b) => b.addEventListener('click', () => { S.slow = +b.dataset.slow; syncControls() }))
+  $('#btnTaskReset').addEventListener('click', () => { for (const k in done) delete done[k]; renderTasks() })
+
+  // ---------- 主迴圈 ----------
+  let lastTs = null
+  function frame (ts) {
+    const dt = lastTs === null ? 0 : Math.min(0.05, (ts - lastTs) / 1000)
+    lastTs = ts
+    if (!S.paused && dt > 0) { advance(dt / S.slow); checkTasks() }
+    draw(); updateReadouts()
+    requestAnimationFrame(frame)
+  }
+
+  readColors()
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors)
+  window.addEventListener('resize', layout)
+  layout(); syncControls(); renderTasks()
+  requestAnimationFrame(frame)
+
+  // 給之後的學習單與測試用
+  window.soundSim = {
+    state: S, speed, lambda, density, dispAt, advance, emitPulse, resetWave, done,
+    tasks: TASKS.map((t) => t.id)
+  }
+})()
+</script>
+</body>
+</html>
