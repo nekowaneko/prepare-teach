@@ -3,19 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>聲音的形成與應用（模擬草稿）</title>
+<title>聲音的形成與應用（草稿）</title>
 <link rel="stylesheet" href="../../design/tokens.css">
 <link rel="stylesheet" href="../../design/components.css">
 <style>
   [hidden] { display: none !important; }
   * { box-sizing: border-box; }
-  .top { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; padding: var(--space-4) var(--space-4) 0; max-width: 1400px; margin: 0 auto; }
+  .top { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; padding: var(--space-4) var(--space-4) 0; max-width: 1800px; margin: 0 auto; }
   .top h1 { margin: 0; }
-  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--space-4); padding: var(--space-4); max-width: 1400px; margin: 0 auto; align-items: start; }
-  .stage { display: grid; gap: var(--space-3); min-width: 0; }
+  .top .views { margin-left: auto; }
+  /* 三欄：控制板｜模擬｜側欄（教案、板書或學習單） */
+  .layout { display: grid; grid-template-columns: 300px minmax(0, 1fr) 440px; grid-template-areas: "ctrl stage side"; gap: var(--space-4); padding: var(--space-4); max-width: 1800px; margin: 0 auto; align-items: start; }
+  .layout.projecting { grid-template-columns: 300px minmax(0, 1fr) 520px; }
+  .layout.prepping { grid-template-columns: 300px minmax(0, 1fr) 560px; }
+  .stage { grid-area: stage; display: grid; gap: var(--space-3); min-width: 0; position: sticky; top: var(--space-4); }
+  .panel { grid-area: ctrl; }
+  .side { grid-area: side; min-width: 0; position: sticky; top: var(--space-4); max-height: calc(100vh - 2 * var(--space-4)); overflow-y: auto;
+    background: var(--surface-card); border-radius: var(--radius-lg); padding: var(--space-4); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); align-content: start; }
   .canvas-wrap { background: var(--surface-card); border-radius: var(--radius-lg); overflow: hidden; }
   #cv { display: block; width: 100%; touch-action: pan-y; }
-  .readouts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .panel { display: grid; gap: var(--space-3); min-width: 0; }
   .panel .sl-card { display: grid; gap: var(--space-3); padding: var(--space-4); }
   .panel h2 { margin: 0; }
@@ -34,21 +41,79 @@
   .tasks li { display: flex; justify-content: space-between; gap: var(--space-2); align-items: flex-start; }
   .tasks .sl-badge { flex: none; }
   .actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+  /* 側欄共用 */
+  .side h2, .side h3, .side p { margin: 0; }
+  .side input[type="text"], .side select, .side textarea {
+    font: inherit; color: var(--ink); background: var(--surface-card); border: 1px solid var(--line);
+    border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); width: 100%; min-width: 0; }
+  .side textarea { min-height: 72px; resize: vertical; }
+  .side :focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .row { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+  .msg-ok { color: var(--success); background: var(--success-soft); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); }
+  .msg-error { color: var(--danger); background: var(--danger-soft); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); }
+  .table-wrap { overflow-x: auto; }
+  .log-table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  .log-table th, .log-table td { border-bottom: 1px solid var(--line); padding: var(--space-1) var(--space-2); text-align: right; white-space: nowrap; }
+  .log-table th:first-child, .log-table td:first-child, .log-table th:nth-child(2), .log-table td:nth-child(2) { text-align: left; }
+
+  /* 備課：教案表與學習單 */
+  .plan-wrap { line-height: 1.6; }
+  .plan-table [contenteditable] { outline: 1px dashed transparent; border-radius: 3px; }
+  .plan-table [contenteditable]:hover { outline-color: var(--amber); }
+  .plan-table [contenteditable]:focus { outline: 2px solid var(--amber); background: var(--amber-soft); }
+  .paper { border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-3); line-height: 1.7; }
+  .edit-step { border: 1px dashed var(--line); border-radius: var(--radius-lg); padding: var(--space-3); display: grid; gap: var(--space-2); }
+  .edit-blank { display: grid; gap: var(--space-2); padding: var(--space-2); border-radius: var(--radius-md); background: var(--surface-page); }
+  summary { cursor: pointer; padding: var(--space-1) 0; }
+
+  /* 投影：板書 */
+  .board-nav { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; }
+  .board-text { font-size: 28px; line-height: 2.1; font-weight: 700; }
+  .board-line { margin-bottom: 0.4em; }
+  .bw { white-space: nowrap; }
+  .opts { display: inline-flex; flex-wrap: wrap; max-width: 100%; align-items: center; gap: 0 0.2em; margin: 0 0.2em; padding: 0 0.3em; border: 2px dashed var(--ink-muted); border-radius: 14px; vertical-align: middle; }
+  .opt { display: inline-block; padding: 0 0.3em; border: 3px solid transparent; border-radius: 999px; white-space: nowrap; }
+  .opt-sep { color: var(--ink-muted); font-weight: 400; }
+  .opt-correct { border-color: var(--success); }
+  .board-log { font-size: 18px; }
+  .write-area { min-height: 260px; border-top: 1px dashed var(--line); }
+
+  /* 學生作答 */
+  .ws-step { border-left: 4px solid var(--amber); border-radius: var(--radius-md); padding: var(--space-3); background: var(--surface-page); display: grid; gap: var(--space-2); line-height: 1.7; }
+  .ws-step select { width: auto; max-width: 100%; }
+  .confirm-row { display: flex; justify-content: flex-end; align-items: center; gap: var(--space-2); }
+
+  @media (min-width: 561px) and (max-width: 1099px), (min-width: 1600px) {
+    .readouts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+  @media (max-width: 1099px) {
+    .layout, .layout.projecting, .layout.prepping { grid-template-columns: minmax(0, 1fr) 300px; grid-template-areas: "stage ctrl" "side side"; }
+    .side { position: static; max-height: none; overflow: visible; }
+  }
   @media (max-width: 960px) {
-    .layout { grid-template-columns: minmax(0, 1fr); }
+    .layout, .layout.projecting, .layout.prepping { grid-template-columns: minmax(0, 1fr); grid-template-areas: "stage" "ctrl" "side"; }
+    .stage { position: static; }
+    .top .views { margin-left: 0; }
   }
   @media (max-width: 560px) {
-    .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .board-text { font-size: 22px; }
   }
 </style>
 </head>
 <body>
 <header class="top">
   <h1 class="sl-text-title">聲音的形成與應用</h1>
-  <span class="sl-badge sl-badge-amber">模擬草稿</span>
+  <span class="sl-badge sl-badge-amber">草稿</span>
+  <div class="seg views" role="group" aria-label="使用模式">
+    <button class="sl-btn" type="button" data-view="prep" aria-pressed="true">備課</button>
+    <button class="sl-btn" type="button" data-view="project" aria-pressed="false">投影上課</button>
+    <button class="sl-btn" type="button" data-view="student" aria-pressed="false">學生作答</button>
+  </div>
+  <span class="sl-badge" id="classBadge" hidden></span>
 </header>
 
-<main class="layout">
+<main class="layout prepping" id="app">
   <section class="stage" aria-label="模擬畫面">
     <div class="canvas-wrap"><canvas id="cv" aria-label="喇叭在左邊向右發出聲波，粒子形成疏密部"></canvas></div>
     <div class="sl-bento readouts">
@@ -122,11 +187,20 @@
     </div>
 
     <div class="sl-card">
-      <h2 class="sl-text-label">動手任務</h2>
+      <h2 class="sl-text-label">紀錄</h2>
+      <p class="note sl-text-caption">把目前的介質、溫度、密度和聲速記到紀錄表。</p>
+      <div class="actions"><button class="sl-btn" type="button" id="btnLog">記錄數據</button><span class="note sl-text-caption" id="logCount"></span></div>
+    </div>
+
+    <div class="sl-card" id="taskCard">
+      <h2 class="sl-text-label">模擬內建任務</h2>
+      <p class="note sl-text-caption">只在備課時顯示；學習單用的是「紀錄」。</p>
       <ul class="tasks sl-text-body" id="tasks"></ul>
       <div class="actions"><button class="sl-btn" id="btnTaskReset">重設任務</button></div>
     </div>
   </aside>
+
+  <section class="side sl-text-body" id="side" aria-live="polite"></section>
 </main>
 
 <script>
@@ -579,8 +653,569 @@
   window.soundSim = {
     state: S, tracers: () => parts.filter((p) => p.red).map((p) => p.d), speed, lambda, density, dispAt, wall, hm: () => G.hm,
     dispVec: (x, y) => { disp(x, y, wall()); return [ux, uy] }, advance, emitPulse, resetWave, done,
-    tasks: TASKS.map((t) => t.id)
+    tasks: TASKS.map((t) => t.id),
+    // 學習單的紀錄表：目前的介質，或指定介質在某溫度的數值
+    sampleOf: (st, mid, T) => {
+      const m = MEDIA[st].find((x) => x.id === mid)
+      return { st, mid, name: m.name, T, v: m.v(T), rho: m.rho(T) }
+    },
+    sample: () => window.soundSim.sampleOf(S.st, S.mid, S.T),
+    relayout: layout
   }
+})()
+</script>
+
+<script>
+// ---------- 三種模式：備課、投影上課、學生作答（做法沿用簡諧運動 v5） ----------
+(() => {
+  const sim = window.soundSim
+  const $ = (id) => document.getElementById(id)
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+  const clone = (x) => JSON.parse(JSON.stringify(x))
+  const UNIT = 'sound'
+  const CLASSES = { 201: '忠班', 202: '孝班', 203: '仁班', 204: '愛班' }
+  const STATE_NAME = { gas: '氣體', liquid: '液體', solid: '固體' }
+
+  // 預設題目：依 issue #2 的學習單建議；check 是動手任務的判定（看紀錄表），ask 是動手後要寫的理由
+  const defaultSteps = [
+    { id: 's1', kind: 'task', title: 'STEP 1 預測', check: 'media', need: 3, showLog: true,
+      prompt: '換不同的介質（例如氦氣、空氣、二氧化碳、水、鐵），每換一種就按「記錄數據」，比較密度和聲速。記錄 3 種以上的介質後，預測：在沒有任何物質的真空中，聲音傳得比在空氣中快還是慢？',
+      blanks: [{ text: '真空中的聲速比空氣中', options: ['快', '慢'], answer: '慢' }],
+      ask: '為什麼？寫下你的理由。', ref: '慢。真空中沒有粒子可以把振動一個接一個傳下去，聲音無法傳播。',
+      board: '真空中的聲速比空氣 {快|慢*}\n原因：' },
+    { id: 's2', kind: 'task', title: 'STEP 2 歸納', check: 'states', need: 3, showLog: true,
+      prompt: '在氣體、液體、固體中各選一種介質，按「記錄數據」，比較三種狀態的聲速。',
+      blanks: [
+        { text: '聲速最快的是', options: ['固體', '液體', '氣體'], answer: '固體' },
+        { text: '聲速第二快的是', options: ['固體', '液體', '氣體'], answer: '液體' },
+        { text: '聲速最慢的是', options: ['固體', '液體', '氣體'], answer: '氣體' }
+      ],
+      ref: '固體 ＞ 液體 ＞ 氣體',
+      board: '聲速由大到小\n{固*|液|氣} ＞ {固|液*|氣} ＞ {固|液|氣*}' },
+    { id: 's3', kind: 'task', title: 'STEP 3 歸納', check: 'airTemps', need: 4, showLog: true,
+      prompt: '介質選空氣，把溫度依序調到 0、10、20、30、40°C，每調一次就按「記錄數據」。看紀錄表，找出溫度和聲速的關係。',
+      blanks: [
+        { text: '0°C 時，空氣中的聲速約為', options: ['300 m/s', '331 m/s', '343 m/s'], answer: '331 m/s' },
+        { text: '溫度每升高 1°C，聲速約增加', options: ['0.6 m/s', '6 m/s', '60 m/s'], answer: '0.6 m/s' },
+        { text: '空氣中的聲速 v（m/s）和溫度 T（°C）的關係：v ≈', options: ['331 + 0.6T', '331 + 6T', '343 + 0.6T'], answer: '331 + 0.6T' }
+      ],
+      ref: 'v ≈ 331 + 0.6T',
+      board: '0°C 聲速（m/s） {300|331*|343}\n每升高 1°C 增加（m/s） {0.6*|6|60}\nv ≈ {331+0.6T*|331+6T|343+0.6T}' },
+    { id: 's4', kind: 'text', title: 'STEP 4 心得', starter: '我學到了',
+      prompt: '用「我學到了……」寫下一項這堂課學到的內容，不能寫「無」。',
+      ref: '我學到了溫度越高，空氣中的聲速越快。', board: '我學到了：' }
+  ]
+
+  // 動手任務的判定：數紀錄表裡不同的介質、狀態或溫度
+  const CHECKS = {
+    media: { unit: '種介質', count: (log) => new Set(log.map((r) => r.mid)).size },
+    states: { unit: '種狀態', count: (log) => new Set(log.map((r) => r.st)).size },
+    airTemps: { unit: '個空氣溫度', count: (log) => new Set(log.filter((r) => r.mid === 'air').map((r) => r.T)).size }
+  }
+  // 參考答案版學習單的示範紀錄（數值由模擬算出）
+  const EXAMPLES = {
+    media: [['gas', 'he', 20], ['gas', 'air', 20], ['gas', 'co2', 20]],
+    states: [['gas', 'air', 20], ['liquid', 'water', 20], ['solid', 'iron', 20]],
+    airTemps: [0, 10, 20, 30, 40].map((T) => ['gas', 'air', T])
+  }
+
+  // 預設教案：依教案格式（基本資料、學習目標、教學活動設計、附錄一學習單）
+  const defaultPlan = {
+    unit: '聲音的形成與應用',
+    designer: '',
+    target: '國中二年級',
+    time: '45分鐘',
+    equipment: '電子白板、筆電、投影機、本模擬（有平板時可讓學生自行操作）、橫波特徵圖',
+    objTitle: '聲音的傳播',
+    cognitive: '學生能說明聲波的傳遞需要介質',
+    affective: '學生能和同儕分享觀察到的現象',
+    skill: '學生能操作變數來比較不同因素對聲音的影響',
+    phases: [
+      { name: '準備活動', min: 5, items: [
+        { text: '教師用一張圖複習橫波的特徵（粒子振動方向、波峰、波谷、波長、振幅）', min: 5, note: '教師須準備橫波特徵圖' }
+      ] },
+      { name: '發展活動', min: 20, items: [
+        { text: '教師以「投影上課」模式播放連續聲，請學生上台換不同介質並按「記錄數據」，比較密度與聲速，再預測真空中的聲速（學習單 STEP 1）', min: 6, note: '' },
+        { text: '請學生在氣體、液體、固體各選一種介質記錄，歸納三態的聲速大小（學習單 STEP 2）', min: 5, note: '' },
+        { text: '介質選空氣，請學生把溫度調到 0～40°C 並記錄，從紀錄表歸納 v ≈ 331 + 0.6T（學習單 STEP 3）', min: 6, note: '' },
+        { text: '學生用「我學到了……」寫下一項學到的內容（學習單 STEP 4）', min: 3, note: '' }
+      ] },
+      { name: '綜合活動', min: 20, items: [
+        { text: '教師寫例題，學生練習（依課本選題）', min: 20, note: '題號由教師自行填入' }
+      ] }
+    ]
+  }
+
+  // 網址參數：mode=prep|project|student，class=201～204（只在投影與學生作答使用）
+  const params = new URLSearchParams(location.search)
+  const MODES = ['prep', 'project', 'student']
+  const cls = CLASSES[params.get('class')] ? params.get('class') : '201'
+
+  const store = {
+    get: (key, fallback) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback } catch (e) { return fallback } },
+    set: (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); return true } catch (e) { return false } }
+  }
+  const K = (name) => `${UNIT}.${name}`
+  const KC = (name) => `${UNIT}.${cls}.${name}`
+
+  const ui = {
+    mode: MODES.includes(params.get('mode')) ? params.get('mode') : 'prep',
+    // 舊存檔缺的欄位用預設題補上
+    steps: (store.get(K('steps'), null) || clone(defaultSteps)).map((st) => ({ ...clone(defaultSteps.find((d) => d.id === st.id) || {}), ...st })),
+    plan: store.get(K('plan'), null) || clone(defaultPlan),
+    qIndex: 0, editorOpen: false, showAnswer: false,
+    answers: store.get(KC('answers'), {}),
+    confirmed: store.get(KC('confirmed'), {}),
+    student: store.get(KC('student'), ''),
+    log: store.get(KC('log'), []),
+    submitted: false, submitError: '', saveMsg: ''
+  }
+
+  // ---------- 紀錄表 ----------
+  const fmtV = (v) => `${Math.round(v)}`
+  const fmtRho = (r) => r < 10 ? r.toFixed(2) : `${Math.round(r)}`
+  const logRowsHtml = (rows) => rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}（${STATE_NAME[r.st]}）</td><td>${r.T}</td><td>${fmtRho(r.rho)}</td><td>${fmtV(r.v)}</td></tr>`).join('')
+  const LOG_HEAD = '<tr><th>#</th><th>介質</th><th>溫度 °C</th><th>密度 kg/m³</th><th>聲速 m/s</th></tr>'
+  const logTableHtml = () => !ui.log.length
+    ? '<p class="note">還沒有紀錄。按控制板的「記錄數據」新增一筆。</p>'
+    : `<div class="table-wrap"><table class="log-table"><thead>${LOG_HEAD}</thead><tbody>${logRowsHtml(ui.log)}</tbody></table></div>`
+  const updateLogCount = () => { $('logCount').textContent = ui.log.length ? `已記錄 ${ui.log.length} 筆` : '' }
+  $('btnLog').addEventListener('click', () => {
+    const s = sim.sample()
+    const last = ui.log[ui.log.length - 1]
+    if (last && last.mid === s.mid && last.T === s.T) { $('logCount').textContent = '這一筆已經記過了'; return }
+    ui.log.push({ st: s.st, mid: s.mid, name: s.name, T: s.T, v: s.v, rho: s.rho })
+    store.set(KC('log'), ui.log)
+    updateLogCount()
+    if (ui.mode !== 'prep') renderSide()
+  })
+
+  const progress = (s) => { const c = CHECKS[s.check]; return { n: c ? c.count(ui.log) : 0, need: s.need || 1, unit: c ? c.unit : '' } }
+  const taskDone = (s) => { const p = progress(s); return p.n >= p.need }
+
+  // ---------- 備課：教案 ----------
+  const itemsMin = (ph) => ph.items.reduce((s, it) => s + (Number(it.min) || 0), 0)
+  const phaseMin = (ph) => Number(ph.min) || 0
+  const planTotal = () => ui.plan.phases.reduce((s, ph) => s + phaseMin(ph), 0)
+  const targetMin = () => { const m = String(ui.plan.time || '').match(/\d+/); return m ? parseInt(m[0], 10) : null }
+  const phaseHint = (ph) => itemsMin(ph) !== phaseMin(ph) ? `各項合計 ${itemsMin(ph)} 分鐘` : ''
+
+  // 教案表格：用行內樣式，複製到 Word 時才會保留框線
+  const planTableHtml = (editable) => {
+    const pl = ui.plan
+    const ce = (path) => editable ? ` contenteditable="true" data-plan="${path}"` : ''
+    const td = 'style="border: 1px solid #999; padding: 6px 8px; vertical-align: top; text-align: left;"'
+    const th = 'style="border: 1px solid #999; padding: 6px 8px; vertical-align: top; text-align: left; font-weight: bold; white-space: nowrap;"'
+    const field = (label, key) => `<tr><td ${th}>${label}</td><td ${td} colspan="3"${ce(key)}>${esc(pl[key])}</td></tr>`
+    const rows = pl.phases.map((ph, pi) => `
+      <tr><td ${td} colspan="2"><strong>${pi + 1}. ${esc(ph.name)}（<span${ce(`phases.${pi}.min`)}>${phaseMin(ph)}</span>分鐘）</strong>${editable ? ` <span class="note" data-phase-hint="${pi}">${phaseHint(ph)}</span>` : ''}</td><td ${td}></td><td ${td}></td></tr>
+      ${ph.items.map((it, ii) => `<tr>
+        <td ${td} colspan="2"${ce(`phases.${pi}.items.${ii}.text`)}>${esc(it.text)}</td>
+        <td ${td.replace('"', '"white-space: nowrap; ')}><span${ce(`phases.${pi}.items.${ii}.min`)}>${esc(it.min)}</span> 分鐘</td>
+        <td ${td}${ce(`phases.${pi}.items.${ii}.note`)}>${esc(it.note)}</td>
+      </tr>`).join('')}`).join('')
+    return `<table class="plan-table" style="border-collapse: collapse; width: 100%; table-layout: fixed;">
+      <colgroup><col style="width: 20%;"><col style="width: 50%;"><col style="width: 12%;"><col style="width: 18%;"></colgroup>
+      ${field('課程單元名稱', 'unit')}
+      ${field('教案設計者', 'designer')}
+      ${field('教學對象', 'target')}
+      ${field('教學時間', 'time')}
+      ${field('教學設備/資源', 'equipment')}
+      <tr><td ${th} colspan="4">學習目標</td></tr>
+      <tr><td ${td} colspan="4">
+        <span${ce('objTitle')}>${esc(pl.objTitle)}</span>：<br>
+        ●認知：<span${ce('cognitive')}>${esc(pl.cognitive)}</span><br>
+        ●情意：<span${ce('affective')}>${esc(pl.affective)}</span><br>
+        ●技能：<span${ce('skill')}>${esc(pl.skill)}</span>
+      </td></tr>
+      <tr><td ${th} colspan="2">教學活動設計</td><td ${th}>時間</td><td ${th}>備註</td></tr>
+      ${rows}
+    </table>`
+  }
+
+  // 附錄一 學習單：withAnswer 為 true 時是參考答案版
+  const worksheetHtml = (withAnswer) => {
+    const line = '＿＿＿＿＿＿'
+    const u = (t) => `<u>${esc(t)}</u>`
+    const cell = 'style="border: 1px solid #999; padding: 2px 8px; text-align: left;"'
+    const recTable = (s) => {
+      const rows = withAnswer
+        ? (EXAMPLES[s.check] || []).map(([st, mid, T]) => sim.sampleOf(st, mid, T))
+        : Array.from({ length: Math.max(s.need || 1, s.check === 'airTemps' ? 5 : 0) }, () => null)
+      return `<table style="border-collapse: collapse; margin: 4px 0;"><tr><th ${cell}>介質</th><th ${cell}>溫度 °C</th><th ${cell}>密度 kg/m³</th><th ${cell}>聲速 m/s</th></tr>
+        ${rows.map((r) => r ? `<tr><td ${cell}>${esc(r.name)}</td><td ${cell}>${r.T}</td><td ${cell}>${fmtRho(r.rho)}</td><td ${cell}>${fmtV(r.v)}</td></tr>`
+          : `<tr><td ${cell}>　　　</td><td ${cell}></td><td ${cell}></td><td ${cell}></td></tr>`).join('')}</table>`
+    }
+    const body = ui.steps.map((s) => {
+      const parts = []
+      if (s.kind === 'task') parts.push(recTable(s))
+      ;(s.blanks || []).forEach((b) => parts.push(`${esc(b.text)} ${withAnswer ? u(b.answer) : line}。`))
+      if (s.ask) parts.push(`${esc(s.ask)}${withAnswer ? u(s.ref || '') : line + line + line}`)
+      if (s.kind === 'text') parts.push(withAnswer ? u(s.ref || '') : `${esc(s.starter || '')}${line}${line}${line}`)
+      return `<li style="margin-bottom: 10px;"><strong>${esc(s.title)}</strong>：${esc(s.prompt)}<br>${parts.join('<br>')}</li>`
+    }).join('')
+    const name = withAnswer ? `班級與座號：${u('二年忠班 12')}　姓名：${u('王小明')}` : `班級與座號：${line}　姓名：${line}`
+    return `<div>
+      <p style="font-weight: bold; margin: 0 0 6px;">附錄一　${esc(ui.plan.objTitle)}探究學習單${withAnswer ? '（參考答案）' : ''}</p>
+      <p style="margin: 0 0 8px;">${name}</p>
+      <ul style="padding-left: 1.2em; margin: 0;">${body}</ul>
+    </div>`
+  }
+
+  const lessonDocHtml = () => `<div style="font-family: 標楷體, 'DFKai-SB', serif; font-size: 12pt;">
+    ${planTableHtml(false)}<br>${worksheetHtml(false)}<br>${worksheetHtml(true)}</div>`
+
+  const lessonText = () => {
+    const pl = ui.plan
+    const lines = [
+      `課程單元名稱：${pl.unit}`, `教案設計者：${pl.designer}`, `教學對象：${pl.target}`, `教學時間：${pl.time}`, `教學設備/資源：${pl.equipment}`,
+      '', '學習目標', `${pl.objTitle}：`, `●認知：${pl.cognitive}`, `●情意：${pl.affective}`, `●技能：${pl.skill}`, '', '教學活動設計｜時間｜備註'
+    ]
+    pl.phases.forEach((ph, pi) => {
+      lines.push(`${pi + 1}. ${ph.name}（${phaseMin(ph)}分鐘）`)
+      ph.items.forEach((it) => lines.push(`- ${it.text}｜${it.min} 分鐘｜${it.note}`))
+    })
+    return lines.join('\n')
+  }
+
+  const planWarnHtml = () => {
+    const total = planTotal(), target = targetMin()
+    if (target === null) return `<p class="note">三個階段合計 ${total} 分鐘</p>`
+    return total !== target
+      ? `<div class="msg-error">三個階段合計 ${total} 分鐘，和教學時間 ${target} 分鐘不符。</div>`
+      : `<p class="note">三個階段合計 ${total} 分鐘，和教學時間相符。</p>`
+  }
+  const updatePlanTotals = () => {
+    document.querySelectorAll('[data-phase-hint]').forEach((el) => { el.textContent = phaseHint(ui.plan.phases[+el.dataset.phaseHint]) })
+    const warn = $('planWarn')
+    if (warn) warn.innerHTML = planWarnHtml()
+  }
+
+  const renderPrep = () => {
+    const editors = ui.steps.map((s, si) => {
+      const blanks = (s.blanks || []).map((b, bi) => `
+        <div class="edit-blank">
+          <label class="note" for="bt-${si}-${bi}">填空 ${bi + 1} 的題目</label>
+          <input type="text" id="bt-${si}-${bi}" data-edit="blank-text" data-s="${si}" data-b="${bi}" value="${esc(b.text)}">
+          <label class="note" for="bo-${si}-${bi}">選項（用「、」分隔）</label>
+          <input type="text" id="bo-${si}-${bi}" data-edit="blank-options" data-s="${si}" data-b="${bi}" value="${esc(b.options.join('、'))}">
+          <label class="note" for="ba-${si}-${bi}">正確答案</label>
+          <select id="ba-${si}-${bi}" data-edit="blank-answer" data-s="${si}" data-b="${bi}">
+            ${b.options.map((o) => `<option ${o === b.answer ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+          </select>
+        </div>`).join('')
+      const ask = s.ask !== undefined ? `
+          <label class="note" for="sq-${si}">要學生寫的理由（題目）</label>
+          <input type="text" id="sq-${si}" data-edit="ask" data-s="${si}" value="${esc(s.ask)}">` : ''
+      const kindLabel = { text: '自由作答', cloze: '選擇填空', task: `動手任務：${progress(s).unit}，至少 ${s.need || 1}` }[s.kind]
+      return `
+        <div class="edit-step">
+          <div class="row"><strong>${esc(s.title)}</strong><span class="sl-badge">${kindLabel}</span></div>
+          <label class="note" for="st-${si}">步驟名稱</label>
+          <input type="text" id="st-${si}" data-edit="title" data-s="${si}" value="${esc(s.title)}">
+          <label class="note" for="sp-${si}">說明文字</label>
+          <textarea id="sp-${si}" data-edit="prompt" data-s="${si}">${esc(s.prompt)}</textarea>
+          <label class="note" for="sb-${si}">投影板書（選項用 { } 包起來、用 | 分開，正確答案後面加 *，例如 {快|慢*}；按 Enter 換行，一行一個問題）</label>
+          <textarea id="sb-${si}" data-edit="board" data-s="${si}" style="min-height: 50px;">${esc(s.board || '')}</textarea>
+          ${ask}
+          ${s.kind !== 'cloze' ? `<label class="note" for="sr-${si}">參考回答（放進參考答案版）</label>
+          <textarea id="sr-${si}" data-edit="ref" data-s="${si}" style="min-height: 50px;">${esc(s.ref || '')}</textarea>` : ''}
+          ${blanks}
+        </div>`
+    }).join('')
+
+    $('side').innerHTML = `
+      <h2 class="sl-text-title">教案</h2>
+      <p class="note">表格內的文字都可以直接點進去修改，改完會自動儲存。三個階段的合計會和教學時間比對。</p>
+      <div class="table-wrap plan-wrap">${planTableHtml(true)}</div>
+      <div id="planWarn">${planWarnHtml()}</div>
+      <div class="row">
+        <button class="sl-btn sl-btn-primary" type="button" data-act="copy-lesson">複製教案</button>
+        <button class="sl-btn" type="button" data-act="reset-plan">還原預設教案</button>
+        <span class="note" id="copyMsg"></span>
+      </div>
+      <p class="note">複製後可以直接貼到 Word，表格格式會保留；內容包含教案、學習單和參考答案。</p>
+      <h2 class="sl-text-title">附錄一　學習單</h2>
+      <div class="paper">${worksheetHtml(false)}</div>
+      <div class="paper">${worksheetHtml(true)}</div>
+      <details id="stepEditor" ${ui.editorOpen ? 'open' : ''}>
+        <summary><strong>修改學習單題目</strong></summary>
+        <div style="display: grid; gap: var(--space-3); margin-top: var(--space-2);">
+          <p class="note">修改後按「儲存題目」，附錄一、投影板書與學生作答會一起更新。</p>
+          ${editors}
+          ${ui.saveMsg}
+          <div class="row">
+            <button class="sl-btn" type="button" data-act="save-steps">儲存題目</button>
+            <button class="sl-btn" type="button" data-act="reset-steps">還原預設題</button>
+          </div>
+        </div>
+      </details>`
+  }
+
+  // ---------- 投影上課：板書精簡，留白給老師在白板上寫 ----------
+  // 板書語法：{選項一|選項二*|選項三}，* 標示正確答案；只在空白處換行
+  const boardWords = (t) => t.split(/[ 　]+/).filter(Boolean).map((w) => `<span class="bw">${w}</span>`).join(' ')
+  const boardLine = (line, reveal) => esc(line).split(/(\{[^}]*\})/).map((part) => part.startsWith('{') ? part : boardWords(part)).join(' ').replace(/\{([^}]*)\}/g, (m, inner) => {
+    const opts = inner.split('|').map((o) => o.trim()).filter(Boolean)
+    return `<span class="opts">${opts.map((o) => {
+      const ok = o.endsWith('*')
+      const label = ok ? o.slice(0, -1).trim() : o
+      return `<span class="opt${reveal && ok ? ' opt-correct' : ''}">${label}</span>`
+    }).join('<span class="opt-sep">／</span>')}</span>`
+  })
+  const boardHtml = (text, reveal) => String(text || '').split(/\n/).filter((l) => l.trim())
+    .map((l) => `<div class="board-line">${boardLine(l.trim(), reveal)}</div>`).join('')
+
+  const renderProject = () => {
+    const s = ui.steps[ui.qIndex]
+    const hasAnswer = /\*\s*[|}]/.test(s.board || '')
+    const log = s.showLog ? `
+      <div class="board-log">
+        ${logTableHtml()}
+        <div class="row" style="margin-top: var(--space-2);"><button class="sl-btn" type="button" data-act="clear-log" ${ui.log.length ? '' : 'disabled'}>清除紀錄</button></div>
+      </div>` : ''
+    $('side').innerHTML = `
+      <div class="board-nav">
+        <span class="sl-badge sl-badge-amber">${esc(s.title)}　${ui.qIndex + 1} / ${ui.steps.length}</span>
+        <div class="row">
+          <button class="sl-btn" type="button" data-act="q-prev" ${ui.qIndex === 0 ? 'disabled' : ''}>上一題</button>
+          ${hasAnswer ? `<button class="sl-btn" type="button" data-act="q-answer">${ui.showAnswer ? '隱藏答案' : '顯示答案'}</button>` : ''}
+          <button class="sl-btn sl-btn-primary" type="button" data-act="q-next" ${ui.qIndex === ui.steps.length - 1 ? 'disabled' : ''}>下一題</button>
+        </div>
+      </div>
+      <div class="board-text">${boardHtml(s.board || s.title, ui.showAnswer)}</div>
+      ${log}
+      <div class="write-area" aria-hidden="true"></div>`
+  }
+
+  // ---------- 學生作答 ----------
+  const hasText = (s) => s.kind === 'text' || !!s.ask
+  const textOf = (s) => (ui.answers[s.id] || '').trim()
+  // 有句型開頭的題目：去掉開頭和標點後要有內容，且不能只寫「無」
+  const textValid = (s) => {
+    const core = textOf(s).replace(s.starter || '', '').replace(/[\s，。、,.…：:]/g, '')
+    return !!core && !/^(無|沒有|沒|不知道)$/.test(core)
+  }
+  const stepAnswer = (s) => JSON.stringify([hasText(s) ? textOf(s) : '', ...(s.blanks || []).map((b, bi) => ui.answers[`${s.id}-${bi}`] || '')])
+  const stepFilled = (s) => (!hasText(s) || textValid(s)) && (s.blanks || []).every((b, bi) => !!ui.answers[`${s.id}-${bi}`])
+  const needsConfirm = (s) => hasText(s) || (s.blanks || []).length > 0
+  const canConfirm = (s) => stepFilled(s) && ui.confirmed[s.id] !== stepAnswer(s)
+  const confirmNote = (s) => {
+    if (hasText(s) && textOf(s) && textOf(s) !== s.starter && !textValid(s)) return '請寫出一項具體的內容，不能寫「無」'
+    return !ui.confirmed[s.id] ? '' : (ui.confirmed[s.id] !== stepAnswer(s) ? '已修改，按確定更新' : '已記錄')
+  }
+  const isAnswered = (s) => (s.kind !== 'task' || taskDone(s)) && (!needsConfirm(s) || !!ui.confirmed[s.id])
+
+  const updateConfirmBtn = (stepId) => {
+    const st = ui.steps.find((x) => x.id === stepId)
+    const btn = document.querySelector(`[data-confirm="${stepId}"]`)
+    if (st && btn) btn.disabled = !canConfirm(st)
+    const note = document.querySelector(`[data-note="${stepId}"]`)
+    if (st && note) note.textContent = confirmNote(st)
+  }
+
+  const renderStudent = () => {
+    if (ui.submitted) return renderSummary()
+    const done = ui.steps.filter(isAnswered).length
+    const pct = Math.round(done / ui.steps.length * 100)
+    const steps = ui.steps.map((s) => {
+      const parts = []
+      if (s.kind === 'task') {
+        const p = progress(s)
+        parts.push(p.n >= p.need
+          ? `<span><span class="sl-badge sl-badge-success">已完成：記錄了 ${p.n} ${p.unit}</span></span>`
+          : `<span><span class="sl-badge">進行中：已記錄 ${p.n} / ${p.need} ${p.unit}</span></span>`)
+        if (s.showLog) parts.push(logTableHtml())
+      }
+      ;(s.blanks || []).forEach((b, bi) => parts.push(`<div>${esc(b.text)}
+        <select data-ans="${s.id}-${bi}" aria-label="${esc(b.text)}">
+          <option value="">請選擇</option>
+          ${b.options.map((o) => `<option ${ui.answers[`${s.id}-${bi}`] === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+        </select>。</div>`))
+      if (s.ask) parts.push(`<label for="ta-${s.id}">${esc(s.ask)}</label>`)
+      if (hasText(s)) parts.push(`<textarea id="ta-${s.id}" data-ans="${s.id}" aria-label="${esc(s.ask || s.title)}">${esc(ui.answers[s.id] !== undefined ? ui.answers[s.id] : (s.starter || ''))}</textarea>`)
+      if (needsConfirm(s)) parts.push(`<div class="confirm-row">
+        <span class="note" data-note="${s.id}">${confirmNote(s)}</span>
+        <button class="sl-btn" type="button" data-act="confirm" data-confirm="${s.id}" ${canConfirm(s) ? '' : 'disabled'}>確定</button>
+      </div>`)
+      return `<div class="ws-step"><strong>${esc(s.title)}</strong><div>${esc(s.prompt)}</div>${parts.join('')}</div>`
+    }).join('')
+
+    $('side').innerHTML = `
+      <h2 class="sl-text-title">探究學習單</h2>
+      <label for="studentName"><strong>座號與姓名</strong></label>
+      <input type="text" id="studentName" placeholder="例如：12 王小明" value="${esc(ui.student)}">
+      <div class="sl-progress">
+        <div class="sl-progress-head"><span>完成進度</span><span class="sl-progress-num">${done} / ${ui.steps.length}</span></div>
+        <div class="sl-progress-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="完成進度"><div class="sl-progress-fill" style="width: ${pct}%;"></div></div>
+      </div>
+      ${steps}
+      ${ui.submitError ? `<div class="msg-error">${esc(ui.submitError)}</div>` : ''}
+      <button class="sl-btn sl-btn-primary" type="button" data-act="submit">交出學習單</button>
+      <p class="note">作答會暫存在這台裝置上，重新整理不會消失。</p>`
+  }
+
+  const summaryText = () => {
+    const lines = [`聲音的形成與應用學習單｜${CLASSES[cls] ? `${cls} ${CLASSES[cls]}` : ''}｜${ui.student}`]
+    ui.steps.forEach((s) => {
+      if (s.kind === 'task') lines.push(`${s.title}：記錄了 ${progress(s).n} ${progress(s).unit}`)
+      ;(s.blanks || []).forEach((b, bi) => {
+        const a = ui.answers[`${s.id}-${bi}`] || '（未作答）'
+        lines.push(`${s.title}：${b.text} ${a}（${a === b.answer ? '正確' : '再想想'}）`)
+      })
+      if (hasText(s)) lines.push(`${s.title}：${textOf(s) || '（未作答）'}`)
+    })
+    if (ui.log.length) lines.push(`紀錄表：${ui.log.map((r) => `${r.name} ${r.T}°C ${fmtV(r.v)} m/s`).join('；')}`)
+    return lines.join('\n')
+  }
+
+  const renderSummary = () => {
+    const cloze = ui.steps.flatMap((s) => (s.blanks || []).map((b, bi) => ({ s, b, a: ui.answers[`${s.id}-${bi}`] })))
+    const right = cloze.filter((x) => x.a === x.b.answer).length
+    $('side').innerHTML = `
+      <h2 class="sl-text-title">作答摘要</h2>
+      <div class="msg-ok">已交出：${esc(ui.student)}</div>
+      <p>選擇填空答對 <strong>${right} / ${cloze.length}</strong>，紀錄表共 <strong>${ui.log.length}</strong> 筆。</p>
+      ${cloze.map((x) => `<div class="ws-step"><strong>${esc(x.s.title)}</strong><div>${esc(x.b.text)} <strong>${esc(x.a || '（未作答）')}</strong>
+        <span class="sl-badge ${x.a === x.b.answer ? 'sl-badge-success' : 'sl-badge-danger'}">${x.a === x.b.answer ? '正確' : '再想想'}</span></div></div>`).join('')}
+      <label class="note" for="summaryBox">複製下面文字，貼到 Classroom 或傳給老師</label>
+      <textarea id="summaryBox" readonly style="min-height: 160px;">${esc(summaryText())}</textarea>
+      <div class="row">
+        <button class="sl-btn sl-btn-primary" type="button" data-act="copy-summary">複製摘要</button>
+        <button class="sl-btn" type="button" data-act="back-edit">回到作答</button>
+        <span class="note" id="copyMsg"></span>
+      </div>`
+  }
+
+  const renderSide = () => ({ prep: renderPrep, project: renderProject, student: renderStudent })[ui.mode]()
+
+  // ---------- 剪貼簿 ----------
+  const copyText = (text, fallbackEl) => {
+    const msg = $('copyMsg')
+    const done = (ok) => { if (msg) msg.textContent = ok ? '已複製' : '無法自動複製，已選取文字，請按 Ctrl＋C' }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => done(true)).catch(() => { if (fallbackEl) fallbackEl.select(); done(false) })
+    } else { if (fallbackEl) fallbackEl.select(); done(false) }
+  }
+  const copyRich = (html, text) => {
+    const msg = $('copyMsg')
+    try {
+      if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+        const item = new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([text], { type: 'text/plain' }) })
+        navigator.clipboard.write([item]).then(() => { if (msg) msg.textContent = '已複製，可直接貼到 Word' }).catch(() => copyText(text))
+        return
+      }
+    } catch (e) { /* 改用純文字 */ }
+    copyText(text)
+  }
+
+  const setPlanPath = (path, value) => {
+    const keys = path.split('.')
+    let obj = ui.plan
+    keys.slice(0, -1).forEach((k) => { obj = obj[k] })
+    const last = keys[keys.length - 1]
+    obj[last] = last === 'min' ? (parseInt(value, 10) || 0) : value
+    store.set(K('plan'), ui.plan)
+  }
+
+  const readEditors = () => {
+    const steps = clone(ui.steps)
+    document.querySelectorAll('[data-edit]').forEach((el) => {
+      const s = steps[+el.dataset.s]
+      const b = el.dataset.b !== undefined ? s.blanks[+el.dataset.b] : null
+      const v = el.value.trim()
+      if (el.dataset.edit === 'title') s.title = v || s.title
+      if (el.dataset.edit === 'prompt') s.prompt = v
+      if (el.dataset.edit === 'ref') s.ref = v
+      if (el.dataset.edit === 'ask') s.ask = v
+      if (el.dataset.edit === 'board') s.board = el.value.split('\n').map((l) => l.trim()).filter(Boolean).join('\n')
+      if (el.dataset.edit === 'blank-text') b.text = v
+      if (el.dataset.edit === 'blank-options') b.options = el.value.split(/[、,，]/).map((x) => x.trim()).filter(Boolean)
+      if (el.dataset.edit === 'blank-answer') b.answer = el.value
+    })
+    steps.forEach((s) => (s.blanks || []).forEach((b) => { if (!b.options.includes(b.answer)) b.answer = b.options[0] || '' }))
+    return steps
+  }
+
+  // ---------- 模式切換 ----------
+  const setMode = (mode) => {
+    ui.mode = mode
+    document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === mode)))
+    $('app').classList.toggle('projecting', mode === 'project')
+    $('app').classList.toggle('prepping', mode === 'prep')
+    $('taskCard').hidden = mode !== 'prep'
+    const badge = $('classBadge')
+    badge.hidden = mode === 'prep'
+    badge.textContent = `${cls} ${CLASSES[cls]}`
+    const q = new URLSearchParams({ mode })
+    if (mode !== 'prep') q.set('class', cls)
+    try { history.replaceState(null, '', `?${q}`) } catch (e) { /* 網址改不了也不影響 */ }
+    renderSide()
+    sim.relayout()
+  }
+  document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.view)))
+
+  // ---------- 側欄事件 ----------
+  $('side').addEventListener('click', (e) => {
+    const t = e.target.closest('[data-act]')
+    if (!t) return
+    const act = t.dataset.act
+    if (act === 'copy-lesson') copyRich(lessonDocHtml(), lessonText())
+    if (act === 'reset-plan') { ui.plan = clone(defaultPlan); store.set(K('plan'), ui.plan); renderSide() }
+    if (act === 'save-steps') {
+      ui.steps = readEditors()
+      ui.saveMsg = store.set(K('steps'), ui.steps) ? '<div class="msg-ok">題目已儲存</div>' : '<div class="msg-error">這台裝置無法儲存，題目只在這次開啟期間有效</div>'
+      renderSide()
+    }
+    if (act === 'reset-steps') { ui.steps = clone(defaultSteps); store.set(K('steps'), ui.steps); ui.saveMsg = '<div class="msg-ok">已還原預設題</div>'; renderSide() }
+    if (act === 'q-prev') { ui.qIndex = Math.max(0, ui.qIndex - 1); ui.showAnswer = false; renderSide() }
+    if (act === 'q-next') { ui.qIndex = Math.min(ui.steps.length - 1, ui.qIndex + 1); ui.showAnswer = false; renderSide() }
+    if (act === 'q-answer') { ui.showAnswer = !ui.showAnswer; renderSide() }
+    if (act === 'clear-log') { ui.log = []; store.set(KC('log'), ui.log); updateLogCount(); renderSide() }
+    if (act === 'submit') {
+      if (!ui.student.trim()) { ui.submitError = '請先填寫座號與姓名，再交出學習單。'; renderSide(); $('studentName').focus(); return }
+      ui.submitError = ''; ui.submitted = true; renderSide()
+    }
+    if (act === 'confirm') {
+      const st = ui.steps.find((x) => x.id === t.dataset.confirm)
+      if (!st || !canConfirm(st)) return
+      ui.confirmed[st.id] = stepAnswer(st)
+      store.set(KC('confirmed'), ui.confirmed)
+      renderSide()
+    }
+    if (act === 'copy-summary') copyText(summaryText(), $('summaryBox'))
+    if (act === 'back-edit') { ui.submitted = false; renderSide() }
+  })
+  $('side').addEventListener('input', (e) => {
+    const el = e.target
+    if (el.dataset && el.dataset.plan) { setPlanPath(el.dataset.plan, el.textContent.trim()); if (el.dataset.plan.endsWith('.min') || el.dataset.plan === 'time') updatePlanTotals(); return }
+    if (el.id === 'studentName') { ui.student = el.value; store.set(KC('student'), ui.student); return }
+    if (el.dataset.ans) {
+      ui.answers[el.dataset.ans] = el.value
+      store.set(KC('answers'), ui.answers)
+      updateConfirmBtn(el.dataset.ans.split('-')[0])
+    }
+  })
+  // 下拉選單在部分瀏覽器只觸發 change
+  $('side').addEventListener('change', (e) => {
+    const el = e.target
+    if (el.dataset.ans && el.tagName === 'SELECT') { ui.answers[el.dataset.ans] = el.value; store.set(KC('answers'), ui.answers); updateConfirmBtn(el.dataset.ans.split('-')[0]) }
+    if (el.dataset.edit !== 'blank-options') return
+    const sel = $(`ba-${el.dataset.s}-${el.dataset.b}`)
+    const opts = el.value.split(/[、,，]/).map((x) => x.trim()).filter(Boolean)
+    const cur = sel.value
+    sel.innerHTML = opts.map((o) => `<option ${o === cur ? 'selected' : ''}>${esc(o)}</option>`).join('')
+  })
+  $('side').addEventListener('focusout', (e) => {
+    const el = e.target
+    if (el.dataset && el.dataset.plan && el.dataset.plan.endsWith('.min')) { el.textContent = String(parseInt(el.textContent, 10) || 0); updatePlanTotals() }
+  })
+  $('side').addEventListener('toggle', (e) => { if (e.target.id === 'stepEditor') ui.editorOpen = e.target.open }, true)
+
+  updateLogCount()
+  setMode(ui.mode)
+  // 給測試用
+  window.soundUnit = { ui, defaultSteps, defaultPlan, planTotal, isAnswered, setMode, cls }
 })()
 </script>
 </body>
