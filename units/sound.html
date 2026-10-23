@@ -84,6 +84,12 @@
   .ws-step select { width: auto; max-width: 100%; }
   .confirm-row { display: flex; justify-content: flex-end; align-items: center; gap: var(--space-2); }
 
+  /* 投影：發給學生 */
+  .share-card { border: 2px solid var(--amber); border-radius: var(--radius-lg); padding: var(--space-3); display: grid; gap: var(--space-2); }
+  .qr-box { background: #fff; padding: var(--space-2); border-radius: var(--radius-md); justify-self: start; }
+  .qr-box img { display: block; width: 260px; max-width: 100%; height: auto; image-rendering: pixelated; }
+  .share-url { font-family: ui-monospace, Consolas, monospace; font-size: 14px; overflow-wrap: anywhere; user-select: all; }
+
   @media (min-width: 561px) and (max-width: 1099px), (min-width: 1600px) {
     .readouts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   }
@@ -103,6 +109,7 @@
 </head>
 <body>
 <header class="top">
+  <a class="sl-btn" id="backNav" href="../index.html">回導覽</a>
   <h1 class="sl-text-title">聲音的形成與應用</h1>
   <div class="seg views" role="group" aria-label="使用模式">
     <button class="sl-btn" type="button" data-view="prep" aria-pressed="true">備課</button>
@@ -198,6 +205,10 @@
   <section class="side sl-text-body" id="side" aria-live="polite"></section>
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="../site.js"></script>
+<script src="lib/share.js"></script>
 <script>
 (() => {
   const $ = (s) => document.querySelector(s)
@@ -753,7 +764,6 @@
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
   const clone = (x) => JSON.parse(JSON.stringify(x))
   const UNIT = 'sound'
-  const CLASSES = { 201: '忠班', 202: '孝班', 203: '仁班', 204: '愛班' }
   const STATE_NAME = { gas: '氣體', liquid: '液體', solid: '固體' }
 
   // 預設題目：依 issue #2 的學習單建議；check 是動手任務的判定（看紀錄表），ask 是動手後要寫的理由
@@ -832,9 +842,11 @@
   }
 
   // 網址參數：mode=prep|project|student，class=201～204（只在投影與學生作答使用）
-  const params = new URLSearchParams(location.search)
-  const MODES = ['prep', 'project', 'student']
-  const cls = CLASSES[params.get('class')] ? params.get('class') : '201'
+  const startMode = Site.modeOf(location.search)
+  const cls = Site.classOf(location.search)
+  // 學生網址 #q= 帶的是老師改過的題目，蓋在預設題上；學生作答時才採用
+  const shared = UnitShare.decode(location.hash, defaultSteps)
+  const fromUrl = startMode === 'student' && (shared.loaded > 0 || shared.error)
 
   const store = {
     get: (key, fallback) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback } catch (e) { return fallback } },
@@ -844,9 +856,10 @@
   const KC = (name) => `${UNIT}.${cls}.${name}`
 
   const ui = {
-    mode: MODES.includes(params.get('mode')) ? params.get('mode') : 'prep',
+    mode: startMode,
     // 舊存檔缺的欄位用預設題補上
-    steps: (store.get(K('steps'), null) || clone(defaultSteps)).map((st) => ({ ...clone(defaultSteps.find((d) => d.id === st.id) || {}), ...st })),
+    steps: fromUrl ? shared.steps : (store.get(K('steps'), null) || clone(defaultSteps)).map((st) => ({ ...clone(defaultSteps.find((d) => d.id === st.id) || {}), ...st })),
+    shareOpen: false,
     plan: store.get(K('plan'), null) || clone(defaultPlan),
     qIndex: 0, sIndex: 0, editorOpen: false, showAnswer: false,
     answers: store.get(KC('answers'), {}),
@@ -1091,7 +1104,47 @@
       </div>
       <div class="board-text">${boardHtml(s.board || s.title, ui.showAnswer)}</div>
       ${log}
+      <div class="row"><button class="sl-btn" type="button" data-act="share">發給學生</button></div>
+      ${ui.shareOpen ? shareCardHtml() : ''}
       <div class="write-area" aria-hidden="true"></div>`
+  }
+
+  // ---------- 投影上課：發給學生（QR code 與學生網址） ----------
+  const QR_ERR = 'QR code 元件載入失敗，請檢查網路後重新整理。網址仍可複製。'
+  const shareCardHtml = () => {
+    let link
+    try {
+      link = UnitShare.studentUrl(location.origin + location.pathname, cls, ui.steps, defaultSteps)
+    } catch (e) {
+      return '<div class="share-card"><div class="msg-error">學生網址產生失敗：網址壓縮元件載入失敗，請檢查網路後重新整理。</div></div>'
+    }
+    const k = UnitShare.changedSteps(ui.steps, defaultSteps).length
+    let qr
+    if (typeof qrcode === 'undefined') qr = `<div class="msg-error">${QR_ERR}</div>`
+    else {
+      try {
+        const code = qrcode(0, 'M')
+        code.addData(link)
+        code.make()
+        qr = `<div class="qr-box"><img src="${code.createDataURL(6, 2)}" alt="學生網址的 QR code"></div>`
+      } catch (e) {
+        qr = '<div class="msg-error">網址太長，無法產生 QR code，請少改幾題。網址仍可複製。</div>'
+      }
+    }
+    const note = k
+      ? `網址長度 ${link.length} 字元。你改過的 ${k} 題已放進網址，其餘用預設題。學生不用登入。`
+      : '沒有改過題目，學生看到的是預設題。'
+    return `<div class="share-card">
+      <div class="row" style="justify-content: space-between;"><strong>請學生用手機掃描</strong><span class="sl-badge">${esc(Site.classLabel(cls))}</span></div>
+      ${qr}
+      <p class="share-url" id="shareUrl">${esc(link)}</p>
+      <p class="note">${note}${link.length > 2000 ? '網址很長，QR code 可能不好掃，建議少改幾題。' : ''}</p>
+      <div class="row">
+        <button class="sl-btn" type="button" data-act="share-copy">複製網址</button>
+        <button class="sl-btn" type="button" data-act="share-close">收起</button>
+        <span class="note" id="shareMsg"></span>
+      </div>
+    </div>`
   }
 
   // ---------- 學生作答 ----------
@@ -1150,6 +1203,8 @@
 
     $('side').innerHTML = `
       <h2 class="sl-text-title">探究學習單</h2>
+      ${fromUrl && shared.loaded ? `<div><span class="sl-badge sl-badge-success">已載入老師更新的 ${shared.loaded} 題</span></div>` : ''}
+      ${fromUrl && shared.error ? '<div><span class="sl-badge sl-badge-danger">題目沒有載入</span></div><div class="msg-error">這個網址的題目資料不完整，先用預設題目作答。請向老師要新的網址。</div>' : ''}
       <label for="studentName"><strong>座號與姓名</strong></label>
       <input type="text" id="studentName" placeholder="例如：12 王小明" value="${esc(ui.student)}">
       <div class="sl-progress">
@@ -1171,7 +1226,7 @@
   }
 
   const summaryText = () => {
-    const lines = [`聲音的形成與應用學習單｜${CLASSES[cls] ? `${cls} ${CLASSES[cls]}` : ''}｜${ui.student}`]
+    const lines = [`聲音的形成與應用學習單｜${Site.classLabel(cls)}｜${ui.student}`]
     ui.steps.forEach((s) => {
       if (s.kind === 'task') lines.push(`${s.title}：動手任務${taskDone(s) ? '完成' : '未完成'}`)
       ;(s.blanks || []).forEach((b, bi) => {
@@ -1260,10 +1315,10 @@
     $('taskCard').hidden = mode !== 'prep'
     const badge = $('classBadge')
     badge.hidden = mode === 'prep'
-    badge.textContent = `${cls} ${CLASSES[cls]}`
+    badge.textContent = Site.classLabel(cls)
     const q = new URLSearchParams({ mode })
     if (mode !== 'prep') q.set('class', cls)
-    try { history.replaceState(null, '', `?${q}`) } catch (e) { /* 網址改不了也不影響 */ }
+    try { const u = new URL(location.href); u.search = `?${q}`; history.replaceState(null, '', u) } catch (e) { /* 網址改不了也不影響 */ }
     // 換模式也算換到另一步：紀錄表清空，模擬換成目前這一步的場景（備課時不限制）
     ui.log = []; ui.logMsg = ''
     applyScene()
@@ -1304,6 +1359,18 @@
       renderSide()
     }
     if (act === 'copy-summary') copyText(summaryText(), $('summaryBox'))
+    if (act === 'share') { ui.shareOpen = true; renderSide() }
+    if (act === 'share-close') { ui.shareOpen = false; renderSide() }
+    if (act === 'share-copy') {
+      const text = $('shareUrl').textContent
+      const fail = () => {
+        const r = document.createRange(); r.selectNodeContents($('shareUrl'))
+        const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r)
+        $('shareMsg').textContent = '無法自動複製，請選取上方網址後按 Ctrl＋C'
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => { $('shareMsg').textContent = '已複製' }).catch(fail)
+      else fail()
+    }
     if (act === 'back-edit') { ui.submitted = false; renderSide() }
   })
   $('side').addEventListener('input', (e) => {
@@ -1332,6 +1399,8 @@
   })
   $('side').addEventListener('toggle', (e) => { if (e.target.id === 'stepEditor') ui.editorOpen = e.target.open }, true)
 
+  // 學生用網址開啟時，不顯示回導覽
+  $('backNav').hidden = startMode === 'student'
   setMode(ui.mode)
   // 給測試用
   window.soundUnit = { ui, defaultSteps, defaultPlan, planTotal, isAnswered, taskDone, setMode, cls }
