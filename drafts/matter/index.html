@@ -99,7 +99,8 @@
 
     <div class="sl-card" data-for="separate" hidden>
       <h2 class="sl-text-label">實驗步驟</h2>
-      <p class="note sl-text-caption">燒杯裡是沙子和食鹽的混合物。依你想的順序按下步驟。</p>
+      <p class="sl-text-body" style="margin:0;font-weight:700;color:var(--amber-text)">目標：把燒杯中的沙子與食鹽分離出來</p>
+      <p class="note sl-text-caption">依你想的順序按下步驟。</p>
       <div class="actions" id="cActs">
         <button class="sl-btn sl-btn-primary" data-act="water">加水攪拌</button>
         <button class="sl-btn sl-btn-primary" data-act="filter">過濾</button>
@@ -461,7 +462,7 @@
   }
   function separated () {
     const L = Cs.locs
-    return !Cs.anim && describe(L.filter) === '沙子' && describe(L.dish) === '食鹽晶體' && describe(L.cup) === '水'
+    return !Cs.anim && describe(L.filter) === '沙子' && describe(L.dish) === '食鹽晶體'
   }
 
   // ---------- 任務（成功判定） ----------
@@ -474,7 +475,7 @@
     { id: 'steamEscape', scene: 'states', text: '拿掉容器，讓一半以上的水蒸氣跑掉', check: () => A.ms.filter((m) => m.out).length >= NA / 2 },
     { id: 'boil', scene: 'change', text: '用火把讓水變成水蒸氣', check: () => B.sub === 'water' && countB().g >= 10 },
     { id: 'burn', scene: 'change', text: '用火把讓氫氣和氧氣全部變成水', check: () => { const c = countB(); return B.sub === 'h2o2' && c.H2 === 0 && c.O2 === 0 && B.ms.every((m) => !m.morph) } },
-    { id: 'separate', scene: 'separate', text: '把混合物拆成沙子、食鹽晶體和水', check: separated }
+    { id: 'separate', scene: 'separate', text: '把燒杯中的沙子與食鹽分離出來', check: separated }
   ]
   const done = {}
   function renderTasks () {
@@ -497,7 +498,7 @@
   function readColors () {
     const cs = getComputedStyle(document.documentElement)
     const g = (k) => cs.getPropertyValue(k).trim()
-    C = { ink: g('--ink'), muted: g('--ink-muted'), amber: g('--amber'), amberText: g('--amber-text'), line: g('--line'),
+    C = { ink: g('--ink'), muted: g('--ink-muted'), amber: g('--amber'), amberText: g('--amber-text'), amberSoft: g('--amber-soft'), line: g('--line'),
       card: g('--surface-card'), page: g('--surface-page'), slate: g('--surface-slate'), danger: g('--danger'),
       O: '#e0574b', Ostroke: '#a8352b', H: '#f6f4f0', Hstroke: '#8a8580',
       sand: '#b88a4f', sandStroke: '#7d5a2c', water: 'rgba(70, 150, 225, 0.28)', waterLine: 'rgba(50, 120, 200, 0.8)', glass: 'rgba(140, 180, 210, 0.55)' }
@@ -622,6 +623,7 @@
     const { L, st, t } = shownLocs()
     const k = Math.min((G.W - 16) / 372, (G.H - 70) / 300)
     const x0 = (G.W - 372 * k) / 2, y0 = 46 + (G.H - 56 - 300 * k) / 2
+    drawGoal('目標：把燒杯中的沙子與食鹽分離出來'); Cs.goalShown = true
     const T = (i) => (x, y) => [x0 + (i * 126 + x) * k, y0 + y * k]
     ctx.lineJoin = 'round'
     ctx.fillStyle = C.line; ctx.fillRect(0, y0 + 291 * k, G.W, Math.max(3, 3 * k))
@@ -693,6 +695,16 @@
     ;[['燒杯', 0, 60], ['過濾', 1, 59], ['蒸發', 2, 60]].forEach(([s, i, x]) => ctx.fillText(s, ...T(i)(x, 52)))
     ctx.font = font(G.font - 3); ctx.fillStyle = C.muted; ctx.textBaseline = 'bottom'
     ctx.fillText('濾紙', ...T(1)(59, 88)); if (Cs.cover) ctx.fillText('冷玻璃片', ...T(2)(56, 136))
+  }
+  // 醒目的實驗目標，放在畫面最上方
+  function drawGoal (text) {
+    const fs = G.narrow ? 16 : 24
+    ctx.font = font(fs, 700)
+    const w = Math.min(G.W - 24, ctx.measureText(text).width + 2 * fs), h = fs * 2.1, x = (G.W - w) / 2, y = 14
+    ctx.fillStyle = C.amberSoft; ctx.strokeStyle = C.amber; ctx.lineWidth = 2
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.fill(); ctx.stroke()
+    ctx.fillStyle = C.amberText; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    ctx.fillText(text, G.W / 2, y + h / 2, w - fs)
   }
   function line (p, xa, ya, xb, yb) { ctx.beginPath(); ctx.moveTo(...p(xa, ya)); ctx.lineTo(...p(xb, yb)); ctx.stroke() }
   function drawBeakerBox (p, xa, ya, xb, yb, l, k, stir, small) {
@@ -776,7 +788,7 @@
     } else {
       const L = Cs.anim ? Cs.anim.from : Cs.locs
       rows = [['濾紙上', describe(L.filter)], ['蒸發皿', describe(L.dish)], ['收集到的水', describe(L.cup)],
-        ['結果', separated() ? '分成三種純物質' : '還沒分開']]
+        ['結果', separated() ? '沙子與食鹽分開了' : '還沒分開']]
     }
     const key = JSON.stringify(rows)
     if (key === lastOut) return
