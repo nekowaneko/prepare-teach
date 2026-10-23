@@ -29,6 +29,7 @@
   .tasks li { display: flex; justify-content: space-between; gap: var(--space-2); align-items: flex-start; }
   .tasks .sl-badge { flex: none; }
   .actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  [data-act].used { opacity: .45; text-decoration: line-through; }
   .log { margin: 0; padding-left: 1.4em; display: grid; gap: var(--space-1); }
   .log:empty { display: none; }
   @media (max-width: 960px) {
@@ -100,11 +101,11 @@
     <div class="sl-card" data-for="separate" hidden>
       <h2 class="sl-text-label">實驗步驟</h2>
       <p class="sl-text-body" style="margin:0;font-weight:700;color:var(--amber-text)">目標：把燒杯中的沙子與食鹽分離出來</p>
-      <p class="note sl-text-caption">依你想的順序按下步驟。</p>
+      <p class="note sl-text-caption">依你想的順序按下步驟，每個步驟只能用一次。</p>
       <div class="actions" id="cActs">
-        <button class="sl-btn sl-btn-primary" data-act="water">加水攪拌</button>
-        <button class="sl-btn sl-btn-primary" data-act="filter">過濾</button>
-        <button class="sl-btn sl-btn-primary" data-act="heat">加熱蒸發</button>
+        <button class="sl-btn" data-act="water" data-label="加水攪拌">加水攪拌</button>
+        <button class="sl-btn" data-act="filter" data-label="過濾">過濾</button>
+        <button class="sl-btn" data-act="heat" data-label="加熱蒸發">加熱蒸發</button>
       </div>
       <label class="check sl-text-body"><input type="checkbox" id="cover" checked>蒸發時蓋上冷玻璃片收集水</label>
       <ol class="log sl-text-body" id="cLog"></ol>
@@ -379,16 +380,18 @@
 
   // ---------- 分離混合物 ----------
   const EMPTY = () => ({ sand: 0, saltS: 0, saltD: 0, water: 0 })
-  const Cs = { locs: null, log: [], msg: '', anim: null, cover: true, grains: null }
+  const Cs = { locs: null, log: [], msg: '', anim: null, cover: true, grains: null, used: {}, party: null }
   function resetC () {
     Cs.locs = { beaker: { sand: 1, saltS: 1, saltD: 0, water: 0 }, filter: EMPTY(), flask: EMPTY(), dish: EMPTY(), cup: EMPTY() }
-    Cs.log = []; Cs.msg = ''; Cs.anim = null
+    Cs.log = []; Cs.msg = ''; Cs.anim = null; Cs.used = {}; Cs.party = null
   }
   const clone = (o) => JSON.parse(JSON.stringify(o))
   const has = (l) => l.sand + l.saltS + l.saltD + l.water > 0
   // 每個動作先算出結果，再用動畫從前一個狀態過渡到結果
   function act (kind) {
-    if (Cs.anim) return
+    if (Cs.anim || Cs.used[kind]) return
+    Cs.used[kind] = true // 每個步驟只能用一次
+    Cs.log.push({ water: '加水攪拌', filter: '過濾', heat: '加熱蒸發' }[kind])
     const L = Cs.locs, before = clone(L), stages = []
     let msg = ''
     if (kind === 'water') {
@@ -430,20 +433,45 @@
       }
     }
     if (stages.length) {
-      Cs.log.push({ water: '加水攪拌', filter: '過濾', heat: '加熱蒸發' }[kind])
       Cs.anim = { stages, i: 0, t: 0, from: before, msg }
       Cs.msg = ''
     } else Cs.msg = msg
-    syncControls()
+    syncControls(); renderLog()
   }
   function stepC (dt) {
+    if (Cs.party) {
+      Cs.party.t += dt
+      for (const q of Cs.party.pieces) { q.vy += 300 * dt; q.vx *= 1 - 0.6 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.vr * dt }
+      if (Cs.party.t > 4) Cs.party = null
+    }
     const a = Cs.anim
     if (!a) return
     a.t += dt / a.stages[a.i].dur
     if (a.t >= 1) {
       a.from = a.stages[a.i].to; a.i++; a.t = 0
-      if (a.i >= a.stages.length) { Cs.anim = null; Cs.msg = a.msg; syncControls(); renderLog() }
+      if (a.i >= a.stages.length) { Cs.anim = null; Cs.msg = a.msg; if (separated()) celebrate(); syncControls(); renderLog() }
     }
+  }
+  // 分離成功的慶祝彩帶
+  function celebrate () {
+    const cols = ['#e8a33a', '#e0574b', '#3b8fd9', '#2a9d6a', '#9b6dd6', '#f2c94c']
+    const pieces = []
+    for (let i = 0; i < 140; i++) {
+      const left = i % 2 === 0, th = (left ? -60 : -120) * Math.PI / 180 + rnd(-0.45, 0.45), sp = rnd(350, 750)
+      pieces.push({ x: left ? 0 : G.W, y: G.H * 0.85, vx: Math.cos(th) * sp * (G.narrow ? 0.6 : 1), vy: Math.sin(th) * sp,
+        c: cols[i % cols.length], w: rnd(6, 11), h: rnd(10, 16), rot: rnd(0, 6.28), vr: rnd(-10, 10) })
+    }
+    Cs.party = { t: 0, pieces }
+  }
+  function drawParty () {
+    if (!Cs.party) return
+    ctx.globalAlpha = Math.min(1, (4 - Cs.party.t) / 1)
+    for (const q of Cs.party.pieces) {
+      ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.rot)
+      ctx.fillStyle = q.c; ctx.fillRect(-q.w / 2, -q.h / 2 * Math.abs(Math.cos(q.rot * 1.7)), q.w, q.h * Math.abs(Math.cos(q.rot * 1.7)) + 1)
+      ctx.restore()
+    }
+    ctx.globalAlpha = 1
   }
   // 動畫中各位置的顯示量
   function shownLocs () {
@@ -498,7 +526,7 @@
   function readColors () {
     const cs = getComputedStyle(document.documentElement)
     const g = (k) => cs.getPropertyValue(k).trim()
-    C = { ink: g('--ink'), muted: g('--ink-muted'), amber: g('--amber'), amberText: g('--amber-text'), amberSoft: g('--amber-soft'), line: g('--line'),
+    C = { ink: g('--ink'), muted: g('--ink-muted'), amber: g('--amber'), amberText: g('--amber-text'), amberSoft: g('--amber-soft'), success: g('--success'), successSoft: g('--success-soft'), line: g('--line'),
       card: g('--surface-card'), page: g('--surface-page'), slate: g('--surface-slate'), danger: g('--danger'),
       O: '#e0574b', Ostroke: '#a8352b', H: '#f6f4f0', Hstroke: '#8a8580',
       sand: '#b88a4f', sandStroke: '#7d5a2c', water: 'rgba(70, 150, 225, 0.28)', waterLine: 'rgba(50, 120, 200, 0.8)', glass: 'rgba(140, 180, 210, 0.55)' }
@@ -623,7 +651,8 @@
     const { L, st, t } = shownLocs()
     const k = Math.min((G.W - 16) / 372, (G.H - 70) / 300)
     const x0 = (G.W - 372 * k) / 2, y0 = 46 + (G.H - 56 - 300 * k) / 2
-    drawGoal('目標：把燒杯中的沙子與食鹽分離出來'); Cs.goalShown = true
+    if (separated()) drawGoal('完成：沙子與食鹽分開了', true); else drawGoal('目標：把燒杯中的沙子與食鹽分離出來')
+    Cs.goalShown = true
     const T = (i) => (x, y) => [x0 + (i * 126 + x) * k, y0 + y * k]
     ctx.lineJoin = 'round'
     ctx.fillStyle = C.line; ctx.fillRect(0, y0 + 291 * k, G.W, Math.max(3, 3 * k))
@@ -697,13 +726,13 @@
     ctx.fillText('濾紙', ...T(1)(59, 88)); if (Cs.cover) ctx.fillText('冷玻璃片', ...T(2)(56, 136))
   }
   // 醒目的實驗目標，放在畫面最上方
-  function drawGoal (text) {
+  function drawGoal (text, ok) {
     const fs = G.narrow ? 16 : 24
     ctx.font = font(fs, 700)
     const w = Math.min(G.W - 24, ctx.measureText(text).width + 2 * fs), h = fs * 2.1, x = (G.W - w) / 2, y = 14
-    ctx.fillStyle = C.amberSoft; ctx.strokeStyle = C.amber; ctx.lineWidth = 2
+    ctx.fillStyle = ok ? C.successSoft : C.amberSoft; ctx.strokeStyle = ok ? C.success : C.amber; ctx.lineWidth = 2
     ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.fill(); ctx.stroke()
-    ctx.fillStyle = C.amberText; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    ctx.fillStyle = ok ? C.success : C.amberText; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
     ctx.fillText(text, G.W / 2, y + h / 2, w - fs)
   }
   function line (p, xa, ya, xb, yb) { ctx.beginPath(); ctx.moveTo(...p(xa, ya)); ctx.lineTo(...p(xb, yb)); ctx.stroke() }
@@ -755,7 +784,7 @@
     ctx.fillStyle = C.card; ctx.fillRect(0, 0, G.W, G.H)
     if (S.scene === 'states') drawStates()
     else if (S.scene === 'change') drawChange()
-    else drawSep()
+    else { drawSep(); drawParty() }
   }
 
   // ---------- 讀數 ----------
@@ -794,6 +823,8 @@
     if (key === lastOut) return
     lastOut = key
     rows.forEach(([l, v], i) => { $(`#rl${i}`).textContent = l; $(`#rv${i}`).textContent = v })
+    // 分離結果：還沒分開用紅色，分開了用綠色
+    $('#rv3').style.color = S.scene !== 'separate' ? '' : separated() ? 'var(--success)' : 'var(--danger)'
   }
 
   // ---------- 控制板 ----------
@@ -805,7 +836,13 @@
     document.querySelectorAll('[data-sub]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.sub === B.sub))
     $('#btnTorch').textContent = B.torch ? '移走火把' : '點燃火把'
     $('#subNote').textContent = B.sub === 'water' ? '燒杯裡是水，火把在燒杯下方加熱。' : '容器裡有 16 個氫分子和 8 個氧分子，火把從左邊伸進容器。'
-    document.querySelectorAll('[data-act]').forEach((b) => { b.disabled = !!Cs.anim })
+    document.querySelectorAll('[data-act]').forEach((b) => {
+      const used = !!Cs.used[b.dataset.act]
+      b.disabled = !!Cs.anim || used
+      b.classList.toggle('used', used)
+      b.textContent = used ? `✕ ${b.dataset.label}` : b.dataset.label
+      b.setAttribute('aria-label', used ? `${b.dataset.label}（用過了）` : b.dataset.label)
+    })
     $('#cover').disabled = !!Cs.anim
     $('#cMsg').textContent = Cs.msg
   }
