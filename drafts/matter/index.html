@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>認識物質（模擬草稿）</title>
+<link rel="stylesheet" href="../../design/tokens.css">
+<link rel="stylesheet" href="../../design/components.css">
+<style>
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  .top { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; padding: var(--space-4) var(--space-4) 0; max-width: 1400px; margin: 0 auto; }
+  .top h1 { margin: 0; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--space-4); padding: var(--space-4); max-width: 1400px; margin: 0 auto; align-items: start; }
+  .stage { display: grid; gap: var(--space-3); min-width: 0; }
+  .canvas-wrap { background: var(--surface-card); border-radius: var(--radius-lg); overflow: hidden; }
+  #cv { display: block; width: 100%; height: clamp(440px, 72vh, 700px); touch-action: pan-y; }
+  .readouts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .readouts .sl-card-value { font-size: clamp(16px, 2vw, 24px); }
+  .panel { display: grid; gap: var(--space-3); min-width: 0; }
+  .panel .sl-card { display: grid; gap: var(--space-3); padding: var(--space-4); }
+  .panel h2 { margin: 0; }
+  .seg { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .seg .sl-btn[aria-pressed="true"] { background: var(--amber-soft); border-color: var(--amber); color: var(--amber-text); }
+  .check { display: flex; gap: var(--space-2); align-items: center; }
+  .check input { width: 18px; height: 18px; accent-color: var(--amber); margin: 0; }
+  .note { margin: 0; color: var(--ink-muted); }
+  .tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+  .tasks li { display: flex; justify-content: space-between; gap: var(--space-2); align-items: flex-start; }
+  .tasks .sl-badge { flex: none; }
+  .actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .log { margin: 0; padding-left: 1.4em; display: grid; gap: var(--space-1); }
+  .log:empty { display: none; }
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #cv { height: 460px; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1 class="sl-text-title">認識物質</h1>
+  <span class="sl-badge sl-badge-amber">模擬草稿</span>
+</header>
+
+<main class="layout">
+  <section class="stage" aria-label="模擬畫面">
+    <div class="canvas-wrap"><canvas id="cv" aria-label="水分子的三態、物理變化與化學變化、分離混合物"></canvas></div>
+    <div class="sl-bento readouts">
+      <div class="sl-card sl-card-slate"><div class="sl-card-label" id="rl0"></div><div class="sl-card-value" id="rv0">—</div></div>
+      <div class="sl-card"><div class="sl-card-label" id="rl1"></div><div class="sl-card-value" id="rv1">—</div></div>
+      <div class="sl-card"><div class="sl-card-label" id="rl2"></div><div class="sl-card-value" id="rv2">—</div></div>
+      <div class="sl-card"><div class="sl-card-label" id="rl3"></div><div class="sl-card-value" id="rv3">—</div></div>
+    </div>
+  </section>
+
+  <aside class="panel" aria-label="控制板">
+    <div class="sl-card">
+      <h2 class="sl-text-label">畫面</h2>
+      <div class="seg" role="group" aria-label="畫面" id="segScene">
+        <button class="sl-btn" data-scene="states" aria-pressed="true">三態</button>
+        <button class="sl-btn" data-scene="change" aria-pressed="false">兩種變化</button>
+        <button class="sl-btn" data-scene="separate" aria-pressed="false">分離混合物</button>
+      </div>
+    </div>
+
+    <div class="sl-card" data-for="states">
+      <h2 class="sl-text-label">水的狀態</h2>
+      <div class="seg" role="group" aria-label="水的狀態" id="segState">
+        <button class="sl-btn" data-st="solid" aria-pressed="true">冰（固態）</button>
+        <button class="sl-btn" data-st="liquid" aria-pressed="false">水（液態）</button>
+        <button class="sl-btn" data-st="gas" aria-pressed="false">水蒸氣（氣態）</button>
+      </div>
+      <h2 class="sl-text-label">容器</h2>
+      <div class="seg" role="group" aria-label="容器" id="segBox">
+        <button class="sl-btn" data-box="none" aria-pressed="false">不放容器</button>
+        <button class="sl-btn" data-box="circle" aria-pressed="false">圓形容器</button>
+        <button class="sl-btn" data-box="square" aria-pressed="true">方形容器</button>
+      </div>
+      <div class="actions"><button class="sl-btn" id="btnResetA">重新開始</button></div>
+      <p class="note sl-text-caption">圓形和方形容器的面積相同。畫面只畫 64 個水分子，水蒸氣的分子實際上離得更遠。</p>
+    </div>
+
+    <div class="sl-card" data-for="change" hidden>
+      <h2 class="sl-text-label">物質</h2>
+      <div class="seg" role="group" aria-label="物質" id="segSub">
+        <button class="sl-btn" data-sub="water" aria-pressed="true">水</button>
+        <button class="sl-btn" data-sub="h2o2" aria-pressed="false">氫氣和氧氣</button>
+      </div>
+      <div class="actions">
+        <button class="sl-btn sl-btn-primary" id="btnTorch">點燃火把</button>
+        <button class="sl-btn" id="btnResetB">重新開始</button>
+      </div>
+      <p class="note sl-text-caption" id="subNote"></p>
+    </div>
+
+    <div class="sl-card" data-for="separate" hidden>
+      <h2 class="sl-text-label">實驗步驟</h2>
+      <p class="note sl-text-caption">燒杯裡是沙子和食鹽的混合物。依你想的順序按下步驟。</p>
+      <div class="actions" id="cActs">
+        <button class="sl-btn sl-btn-primary" data-act="water">加水攪拌</button>
+        <button class="sl-btn sl-btn-primary" data-act="filter">過濾</button>
+        <button class="sl-btn sl-btn-primary" data-act="heat">加熱蒸發</button>
+      </div>
+      <label class="check sl-text-body"><input type="checkbox" id="cover" checked>蒸發時蓋上冷玻璃片收集水</label>
+      <ol class="log sl-text-body" id="cLog"></ol>
+      <p class="sl-text-body" id="cMsg" style="margin:0"></p>
+      <div class="actions"><button class="sl-btn" id="btnResetC">重新開始</button></div>
+    </div>
+
+    <div class="sl-card">
+      <h2 class="sl-text-label">動手任務</h2>
+      <ul class="tasks sl-text-body" id="tasks"></ul>
+      <div class="actions"><button class="sl-btn" id="btnTaskReset">重設任務</button></div>
+    </div>
+  </aside>
+</main>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s)
+  const cv = $('#cv'), ctx = cv.getContext('2d')
+  let C = {}
+  const G = {}
+  const rnd = (a, b) => a + Math.random() * (b - a)
+  const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v) }
+  const ease = (t) => t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t)
+  const lerp = (a, b, t) => a + (b - a) * t
+
+  // ---------- 分子（世界座標以分子直徑約 1 為單位，y 向下） ----------
+  // 水分子 H–O–H 夾角 104.5°
+  const HA = 104.5 / 2 * Math.PI / 180
+  const KIND = {
+    H2O: { rad: 0.5, atoms: [['O', -0.1, 0], ['H', -0.1 + 0.46 * Math.cos(HA), 0.46 * Math.sin(HA)], ['H', -0.1 + 0.46 * Math.cos(HA), -0.46 * Math.sin(HA)]] },
+    H2: { rad: 0.42, atoms: [['H', -0.2, 0], ['H', 0.2, 0]] },
+    O2: { rad: 0.6, atoms: [['O', -0.3, 0], ['O', 0.3, 0]] }
+  }
+  const AR = { O: 0.36, H: 0.24 }
+  const mk = (kind, x, y, phase) => ({ kind, x, y, vx: 0, vy: 0, a: rnd(0, 2 * Math.PI), w: 0, phase, out: false, morph: null,
+    lt: 1, fx: x, fy: y, fa: 0, tx: x, ty: y, ta: 0, ph: rnd(0, 2 * Math.PI) })
+  function atomsOf (m) {
+    const c = Math.cos(m.a), s = Math.sin(m.a)
+    return KIND[m.kind].atoms.map(([el, ax, ay]) => ({ el, x: m.x + ax * c - ay * s, y: m.y + ax * s + ay * c }))
+  }
+
+  // ---------- 三態畫面的幾何 ----------
+  const SQ = 10 // 方形容器半邊長
+  const R = 2 * SQ / Math.sqrt(Math.PI) // 與方形面積相同的圓
+  const FLOOR = SQ // 桌面
+  const CY = FLOOR - R // 圓心
+  const WALL = 0.15
+  const NA = 64
+
+  const S = { scene: 'states', time: 0 }
+  const A = { st: 'solid', box: 'square', ms: [], since: 0, seen: {} }
+  const B = { sub: 'water', torch: false, heat: 0, ms: [], hot: [], changed: false, flash: 0 }
+  const BK = { x0: -6, x1: 6, y0: -1, y1: 7 } // 兩種變化：開口燒杯
+  const TORCH = { x: -9.1, y: 3, r: 1.7 } // 兩種變化：火把火焰伸進容器的位置
+
+  // 冰：三角格子，從下往上排
+  function latticeSites (n) {
+    const a = 1.08, cols = 8, rowH = a * Math.sqrt(3) / 2
+    const hw = (cols - 1 + 0.5) * a / 2 + 0.5
+    let yb = FLOOR - 0.5 - (A.box === 'none' ? 0 : WALL)
+    if (A.box === 'circle') yb = CY + Math.sqrt((R - WALL) ** 2 - hw * hw) - 0.55
+    const sites = []
+    for (let k = 0; k < n; k++) {
+      const row = Math.floor(k / cols), col = k % cols
+      sites.push({ x: -hw + 0.5 + col * a + (row % 2 ? a / 2 : 0), y: yb - row * rowH, a: (row % 2 ? 0.4 : -0.4) + (col % 2 ? Math.PI : 0), row })
+    }
+    return sites
+  }
+  function toSolid () {
+    const live = A.ms.filter((m) => !m.out).sort((p, q) => q.y - p.y)
+    const sites = latticeSites(live.length)
+    for (let i = 0; i < live.length; i += 8) {
+      const ms = live.slice(i, i + 8).sort((p, q) => p.x - q.x)
+      const ss = sites.slice(i, i + 8).sort((p, q) => p.x - q.x)
+      ms.forEach((m, j) => {
+        Object.assign(m, { phase: 's', fx: m.x, fy: m.y, fa: m.a, tx: ss[j].x, ty: ss[j].y, ta: ss[j].a, lt: 0, vx: 0, vy: 0 })
+      })
+    }
+  }
+  function setState (st) {
+    if (st === 'solid') toSolid()
+    else {
+      for (const m of A.ms) {
+        if (m.out) continue
+        if (m.phase === 's') { m.x = m.tx; m.y = m.ty; m.a = m.ta }
+        m.phase = st === 'liquid' ? 'l' : 'g'
+        const sp = st === 'gas' ? 5 : 0.3, th = rnd(0, 2 * Math.PI)
+        if (st === 'gas' || m.vx === 0) { m.vx = sp * Math.cos(th); m.vy = sp * Math.sin(th) }
+        m.w = rnd(-2, 2)
+      }
+    }
+    A.st = st; A.since = S.time
+  }
+  function resetA () {
+    A.ms = []
+    for (let i = 0; i < NA; i++) A.ms.push(mk('H2O', rnd(-5, 5), rnd(-2, 6), 'l'))
+    const st = A.st; A.st = ''
+    setState(st)
+    for (const m of A.ms) { if (m.phase === 's') { m.lt = 1; m.x = m.tx; m.y = m.ty; m.a = m.ta } }
+    if (st === 'liquid') for (let i = 0; i < 200; i++) physics(A.ms, 1 / 120, boundsA, paramA)
+    A.since = S.time
+  }
+
+  // ---------- 粒子運動 ----------
+  function rectIn (m, x0, y0, x1, y1, r, e) {
+    if (m.x < x0 + r) { m.x = x0 + r; if (m.vx < 0) m.vx = -m.vx * e }
+    if (m.x > x1 - r) { m.x = x1 - r; if (m.vx > 0) m.vx = -m.vx * e }
+    if (m.y < y0 + r) { m.y = y0 + r; if (m.vy < 0) m.vy = -m.vy * e }
+    if (m.y > y1 - r) { m.y = y1 - r; if (m.vy > 0) m.vy = -m.vy * e }
+  }
+  function circIn (m, cx, cy, rr, r, e) {
+    const dx = m.x - cx, dy = m.y - cy, d = Math.hypot(dx, dy), lim = rr - r
+    if (d <= lim) return
+    const nx = dx / d, ny = dy / d
+    m.x = cx + nx * lim; m.y = cy + ny * lim
+    const vn = m.vx * nx + m.vy * ny
+    if (vn > 0) { m.vx -= (1 + e) * vn * nx; m.vy -= (1 + e) * vn * ny }
+  }
+  const view = () => ({ x0: -G.ox / G.sc, x1: (G.W - G.ox) / G.sc, y0: G.yv - G.oy / G.sc, y1: G.yv + (G.H - G.oy) / G.sc })
+  function boundsA (m) {
+    const r = KIND[m.kind].rad
+    if (A.box === 'square') return rectIn(m, -SQ + WALL, -SQ + WALL, SQ - WALL, SQ - WALL, r, 1)
+    if (A.box === 'circle') return circIn(m, 0, CY, R - WALL, r, 1)
+    const v = view()
+    if (m.y > FLOOR - r) { m.y = FLOOR - r; if (m.vy > 0) m.vy = -m.vy }
+    if (m.phase === 'g') { if (m.x < v.x0 - 1 || m.x > v.x1 + 1 || m.y < v.y0 - 1) m.out = true; return }
+    if (m.x < v.x0 + r) { m.x = v.x0 + r; if (m.vx < 0) m.vx = -m.vx }
+    if (m.x > v.x1 - r) { m.x = v.x1 - r; if (m.vx > 0) m.vx = -m.vx }
+  }
+  // 每種狀態的重力、溫度（熱擾動強度）、阻尼
+  const LIQ = { g: 14, T: 0.5, gam: 4 }, GAS = { g: 0, T: 30, gam: 0.15 }
+  const paramA = (m) => m.phase === 'l' ? LIQ : GAS
+  function physics (ms, dt, bounds, param) {
+    const live = ms.filter((m) => !m.out && m.phase !== 's')
+    const n = live.length
+    for (let i = 0; i < n; i++) { live[i].ax = 0; live[i].ay = 0 }
+    for (let i = 0; i < n; i++) {
+      const p = live[i], rp = KIND[p.kind].rad
+      for (let j = i + 1; j < n; j++) {
+        const q = live[j], dx = q.x - p.x, dy = q.y - p.y
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) continue
+        const d = Math.hypot(dx, dy) || 1e-6, rmin = rp + KIND[q.kind].rad
+        let f = 0
+        if (d < rmin) f = -1500 * (rmin - d)
+        else if (p.phase === 'l' && q.phase === 'l' && d < rmin * 1.7) { const s = (d - rmin) / (0.7 * rmin); f = 24 * s * (1 - s) }
+        if (f) { const fx = f * dx / d, fy = f * dy / d; p.ax += fx; p.ay += fy; q.ax -= fx; q.ay -= fy }
+      }
+    }
+    for (const m of live) {
+      const P = param(m)
+      m.vx += m.ax * dt; m.vy += (m.ay + P.g) * dt
+      const k = Math.sqrt(2 * P.gam * P.T * dt)
+      m.vx += -P.gam * m.vx * dt + k * gauss(); m.vy += -P.gam * m.vy * dt + k * gauss()
+      const sp = Math.hypot(m.vx, m.vy)
+      if (sp > 20) { m.vx *= 20 / sp; m.vy *= 20 / sp }
+      m.x += m.vx * dt; m.y += m.vy * dt
+      m.w += (-0.5 * m.w) * dt + Math.sqrt(P.T) * 0.6 * gauss() * Math.sqrt(dt) * 3
+      m.a += m.w * dt
+      bounds(m)
+    }
+  }
+  function stepSolid (ms, dt) {
+    for (const m of ms) {
+      if (m.phase !== 's' || m.out) continue
+      m.lt = Math.min(1, m.lt + dt / 1.0)
+      const e = ease(m.lt), j = 0.05
+      m.x = lerp(m.fx, m.tx, e) + j * Math.sin(S.time * 23 + m.ph)
+      m.y = lerp(m.fy, m.ty, e) + j * Math.cos(S.time * 19 + m.ph * 1.3)
+      m.a = lerp(m.fa, m.ta, e) + 0.06 * Math.sin(S.time * 17 + m.ph)
+    }
+  }
+
+  // ---------- 兩種變化 ----------
+  function resetB () {
+    B.ms = []; B.hot = []; B.heat = 0; B.changed = false; B.flash = 0; B.torch = false
+    if (B.sub === 'water') {
+      for (let i = 0; i < 50; i++) B.ms.push(mk('H2O', BK.x0 + 0.6 + (i % 11) * 1.0, BK.y1 - 0.6 - Math.floor(i / 11) * 1.0, 'l'))
+      for (let i = 0; i < 240; i++) physics(B.ms, 1 / 120, boundsB, paramB)
+    } else {
+      const put = (kind) => {
+        for (let tries = 0; tries < 200; tries++) {
+          const x = rnd(-8.5, 9.2), y = rnd(-9.2, 9.2)
+          if (B.ms.every((m) => Math.hypot(m.x - x, m.y - y) > 1.4)) {
+            const m = mk(kind, x, y, 'g'), th = rnd(0, 2 * Math.PI)
+            m.vx = 5 * Math.cos(th); m.vy = 5 * Math.sin(th); m.w = rnd(-2, 2)
+            B.ms.push(m); return
+          }
+        }
+      }
+      for (let i = 0; i < 16; i++) put('H2')
+      for (let i = 0; i < 8; i++) put('O2')
+    }
+  }
+  function boundsB (m) {
+    const r = KIND[m.kind].rad
+    if (B.sub === 'h2o2') return rectIn(m, -SQ + WALL, -SQ + WALL, SQ - WALL, SQ - WALL, r, 1)
+    if (m.y > BK.y0 && m.x > BK.x0 && m.x < BK.x1) {
+      if (m.x < BK.x0 + WALL + r) { m.x = BK.x0 + WALL + r; if (m.vx < 0) m.vx = -m.vx }
+      if (m.x > BK.x1 - WALL - r) { m.x = BK.x1 - WALL - r; if (m.vx > 0) m.vx = -m.vx }
+      if (m.y > BK.y1 - WALL - r) { m.y = BK.y1 - WALL - r; if (m.vy > 0) m.vy = -m.vy }
+    }
+    const v = view()
+    if (m.phase === 'g' && (m.y < v.y0 - 1 || m.x < v.x0 - 1 || m.x > v.x1 + 1)) m.out = true
+  }
+  const VAP = { g: -3, T: 12, gam: 0.3 }
+  function paramB (m) {
+    if (B.sub === 'h2o2') return GAS
+    return m.phase === 'l' ? { g: 14, T: 0.5 + 1.8 * B.heat, gam: 4 } : VAP
+  }
+  function react () {
+    const H2 = B.ms.filter((m) => m.kind === 'H2'), O2 = B.ms.filter((m) => m.kind === 'O2')
+    // 點燃過的分子一直保持高溫，直到反應掉
+    const isHot = (m) => m.ign || (m.ign = B.hot.some((h) => Math.hypot(h.x - m.x, h.y - m.y) < h.r + 0.6) ||
+      (B.torch && Math.hypot(TORCH.x - m.x, TORCH.y - m.y) < TORCH.r + 0.6))
+    const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y)
+    // 碰到高溫的氧分子，或碰到高溫的氫分子最近的氧分子，會和附近的兩個氫分子反應
+    const lit = new Set(O2.filter(isHot))
+    for (const h of H2) {
+      if (!isHot(h)) continue
+      const o = O2.filter((q) => dist(q, h) < 8).sort((p, q) => dist(p, h) - dist(q, h))[0]
+      if (o) lit.add(o)
+    }
+    for (const o of lit) {
+      const near = H2.filter((h) => !h.used).map((h) => [h, dist(h, o)]).filter(([, d]) => d < 8).sort((p, q) => p[1] - q[1])
+      if (near.length < 2) continue
+      // 2 H₂ + O₂ → 2 H₂O：原子重新排列，原子的數目不變
+      const oa = atomsOf(o), h1 = atomsOf(near[0][0]), h2 = atomsOf(near[1][0])
+      const pairs = Math.hypot(h1[0].x - oa[0].x, h1[0].y - oa[0].y) < Math.hypot(h1[0].x - oa[1].x, h1[0].y - oa[1].y) ? [[oa[0], h1], [oa[1], h2]] : [[oa[0], h2], [oa[1], h1]]
+      for (const [O, Hs] of pairs) {
+        const w = mk('H2O', O.x, O.y, 'g'), th = Math.atan2(O.y - o.y, O.x - o.x)
+        w.vx = 7 * Math.cos(th) + rnd(-1, 1); w.vy = 7 * Math.sin(th) + rnd(-1, 1); w.w = rnd(-3, 3)
+        w.morph = { t: 0, from: [O, Hs[0], Hs[1]].map((p) => ({ x: p.x, y: p.y })) }
+        B.ms.push(w)
+      }
+      near[0][0].used = near[1][0].used = true
+      o.used = true
+      B.hot.push({ x: o.x, y: o.y, r: 3.2, t: 0.5 })
+      B.changed = true; B.flash = 1
+    }
+    B.ms = B.ms.filter((m) => !m.used)
+  }
+  function stepB (dt) {
+    if (B.sub === 'water') {
+      B.heat = B.torch ? Math.min(1, B.heat + dt * 0.35) : Math.max(0, B.heat - dt * 0.2)
+      if (B.heat > 0.6) {
+        B.evap = (B.evap || 0) + dt * 6 * (B.heat - 0.6) / 0.4
+        while (B.evap >= 1) {
+          B.evap -= 1
+          const top = B.ms.filter((m) => m.phase === 'l').sort((p, q) => p.y - q.y)[0]
+          if (!top) break
+          top.phase = 'g'; top.vy = -5; top.vx = rnd(-1.5, 1.5); B.changed = true
+        }
+      }
+    } else {
+      react()
+      for (const h of B.hot) h.t -= dt
+      B.hot = B.hot.filter((h) => h.t > 0)
+      B.flash = Math.max(0, B.flash - dt * 3)
+    }
+    for (const m of B.ms) if (m.morph) { m.morph.t += dt / 0.6; if (m.morph.t >= 1) m.morph = null }
+  }
+  function countB () {
+    const c = { H2: 0, O2: 0, H2O: 0, l: 0, g: 0, H: 0, O: 0 }
+    for (const m of B.ms) {
+      c[m.kind]++
+      if (m.kind === 'H2O') c[m.phase === 'l' ? 'l' : 'g']++
+      for (const a of KIND[m.kind].atoms) c[a[0]]++
+    }
+    return c
+  }
+
+  // ---------- 分離混合物 ----------
+  const EMPTY = () => ({ sand: 0, saltS: 0, saltD: 0, water: 0 })
+  const Cs = { locs: null, log: [], msg: '', anim: null, cover: true, grains: null }
+  function resetC () {
+    Cs.locs = { beaker: { sand: 1, saltS: 1, saltD: 0, water: 0 }, filter: EMPTY(), flask: EMPTY(), dish: EMPTY(), cup: EMPTY() }
+    Cs.log = []; Cs.msg = ''; Cs.anim = null
+  }
+  const clone = (o) => JSON.parse(JSON.stringify(o))
+  const has = (l) => l.sand + l.saltS + l.saltD + l.water > 0
+  // 每個動作先算出結果，再用動畫從前一個狀態過渡到結果
+  function act (kind) {
+    if (Cs.anim) return
+    const L = Cs.locs, before = clone(L), stages = []
+    let msg = ''
+    if (kind === 'water') {
+      const b = L.beaker
+      if (!has(b)) msg = '燒杯裡沒有東西。'
+      else if (b.water) msg = '燒杯裡已經有水了。'
+      else {
+        stages.push({ dur: 1.2, to: (() => { const s = clone(L); s.beaker.water = 1; return s })() })
+        b.water = 1; b.saltD += b.saltS; b.saltS = 0
+        stages.push({ dur: 1.6, to: clone(L), stir: true })
+        msg = before.beaker.saltS ? '食鹽溶解在水裡，看不見了；沙子沉在杯底。' : '加了水。'
+      }
+    } else if (kind === 'filter') {
+      const b = L.beaker
+      if (!has(b)) msg = '燒杯裡沒有東西可以過濾。'
+      else {
+        L.filter.sand += b.sand; L.filter.saltS += b.saltS
+        L.flask.water += b.water; L.flask.saltD += b.saltD
+        L.beaker = EMPTY()
+        stages.push({ dur: 2.4, to: clone(L), drip: b.water > 0 || before.beaker.water > 0 })
+        msg = before.beaker.water ? '沙子留在濾紙上，液體流進下面的燒杯。' : '沒有液體流下去，沙子和食鹽都留在濾紙上。'
+      }
+    } else if (kind === 'heat') {
+      const srcKey = has(L.flask) ? 'flask' : has(L.beaker) ? 'beaker' : null
+      if (!srcKey) msg = '沒有東西可以加熱。'
+      else {
+        const src = L[srcKey], d = L.dish
+        d.sand += src.sand; d.saltS += src.saltS; d.saltD += src.saltD; d.water += src.water
+        L[srcKey] = EMPTY()
+        stages.push({ dur: 0.8, to: clone(L) })
+        const w = d.water
+        d.saltS += d.saltD; d.saltD = 0; d.water = 0
+        if (Cs.cover) L.cup.water += w
+        stages.push({ dur: 3, to: clone(L), boil: w > 0 })
+        if (!w) msg = '沒有水可以蒸發，蒸發皿裡的東西沒有改變。'
+        else if (d.sand) msg = '水蒸發了，食鹽和沙子一起留在蒸發皿裡。'
+        else msg = '水蒸發了，蒸發皿裡留下食鹽晶體。'
+        if (w && Cs.cover) msg += '冷玻璃片上凝結的水滴流進杯子。'
+      }
+    }
+    if (stages.length) {
+      Cs.log.push({ water: '加水攪拌', filter: '過濾', heat: '加熱蒸發' }[kind])
+      Cs.anim = { stages, i: 0, t: 0, from: before, msg }
+      Cs.msg = ''
+    } else Cs.msg = msg
+    syncControls()
+  }
+  function stepC (dt) {
+    const a = Cs.anim
+    if (!a) return
+    a.t += dt / a.stages[a.i].dur
+    if (a.t >= 1) {
+      a.from = a.stages[a.i].to; a.i++; a.t = 0
+      if (a.i >= a.stages.length) { Cs.anim = null; Cs.msg = a.msg; syncControls(); renderLog() }
+    }
+  }
+  // 動畫中各位置的顯示量
+  function shownLocs () {
+    const a = Cs.anim
+    if (!a) return { L: Cs.locs, st: null, t: 1 }
+    const to = a.stages[a.i].to, t = ease(a.t), L = {}
+    for (const k in to) { L[k] = {}; for (const q in to[k]) L[k][q] = lerp(a.from[k][q], to[k][q], t) }
+    return { L, st: a.stages[a.i], t: a.t }
+  }
+  function describe (l) {
+    const parts = []
+    if (l.sand > 0.5) parts.push('沙子')
+    if (l.saltS > 0.5) parts.push(l.water > 0.5 ? '食鹽' : '食鹽晶體')
+    if (l.water > 0.5) parts.push(l.saltD > 0.5 ? '食鹽水' : '水')
+    return parts.length ? parts.join('＋') : '—'
+  }
+  function separated () {
+    const L = Cs.locs
+    return !Cs.anim && describe(L.filter) === '沙子' && describe(L.dish) === '食鹽晶體' && describe(L.cup) === '水'
+  }
+
+  // ---------- 任務（成功判定） ----------
+  const held = (t) => S.time - A.since > t
+  const live = () => A.ms.filter((m) => !m.out)
+  const TASKS = [
+    { id: 'iceShape', scene: 'states', text: '把冰放進圓形和方形容器，觀察形狀', check: () => A.seen['solid-circle'] && A.seen['solid-square'] },
+    { id: 'waterShape', scene: 'states', text: '把水倒進圓形和方形容器，觀察形狀', check: () => A.seen['liquid-circle'] && A.seen['liquid-square'] },
+    { id: 'steamFill', scene: 'states', text: '讓水蒸氣充滿方形容器', check: () => A.st === 'gas' && A.box === 'square' && held(2) && live().filter((m) => m.y < -4).length >= 0.15 * live().length },
+    { id: 'steamEscape', scene: 'states', text: '拿掉容器，讓一半以上的水蒸氣跑掉', check: () => A.ms.filter((m) => m.out).length >= NA / 2 },
+    { id: 'boil', scene: 'change', text: '用火把讓水變成水蒸氣', check: () => B.sub === 'water' && countB().g >= 10 },
+    { id: 'burn', scene: 'change', text: '用火把讓氫氣和氧氣全部變成水', check: () => { const c = countB(); return B.sub === 'h2o2' && c.H2 === 0 && c.O2 === 0 && B.ms.every((m) => !m.morph) } },
+    { id: 'separate', scene: 'separate', text: '把混合物拆成沙子、食鹽晶體和水', check: separated }
+  ]
+  const done = {}
+  function renderTasks () {
+    $('#tasks').innerHTML = TASKS.filter((t) => t.scene === S.scene).map((t) =>
+      `<li><span>${t.text}</span><span class="sl-badge ${done[t.id] ? 'sl-badge-success' : ''}">${done[t.id] ? '完成' : '未完成'}</span></li>`).join('')
+  }
+  function checkTasks () {
+    if (A.st !== 'gas' && held(A.st === 'solid' ? 1.5 : 2.5) && A.box !== 'none') A.seen[`${A.st}-${A.box}`] = true
+    let changed = false
+    for (const t of TASKS) {
+      if (!done[t.id] && t.scene === S.scene && t.check()) {
+        done[t.id] = true; changed = true
+        document.dispatchEvent(new CustomEvent('sim:success', { detail: { id: t.id } }))
+      }
+    }
+    if (changed) renderTasks()
+  }
+
+  // ---------- 繪圖 ----------
+  function readColors () {
+    const cs = getComputedStyle(document.documentElement)
+    const g = (k) => cs.getPropertyValue(k).trim()
+    C = { ink: g('--ink'), muted: g('--ink-muted'), amber: g('--amber'), amberText: g('--amber-text'), line: g('--line'),
+      card: g('--surface-card'), page: g('--surface-page'), slate: g('--surface-slate'), danger: g('--danger'),
+      O: '#e0574b', Ostroke: '#a8352b', H: '#f6f4f0', Hstroke: '#8a8580',
+      sand: '#b88a4f', sandStroke: '#7d5a2c', water: 'rgba(70, 150, 225, 0.28)', waterLine: 'rgba(50, 120, 200, 0.8)', glass: 'rgba(140, 180, 210, 0.55)' }
+  }
+  const font = (px, w = 400) => `${w} ${px}px ${getComputedStyle(document.body).fontFamily}`
+  function layout () {
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    G.W = r.width; G.H = r.height; G.narrow = G.W < 560
+    G.font = G.narrow ? 14 : 18
+    // 世界座標可見範圍：x −12.75～12.75、y −13.1～10.9
+    G.oy = G.narrow ? 54 : 58; G.yv = -13.1
+    G.sc = Math.min(G.W / 25.5, (G.H - G.oy - 8) / 24)
+    G.ox = G.W / 2
+  }
+  const px = (x) => G.ox + x * G.sc
+  const py = (y) => G.oy + (y - G.yv) * G.sc
+
+  function drawMolecule (m) {
+    if (m.out) return
+    let at = atomsOf(m)
+    if (m.morph) { const t = ease(m.morph.t); at = at.map((p, i) => ({ el: p.el, x: lerp(m.morph.from[i].x, p.x, t), y: lerp(m.morph.from[i].y, p.y, t) })) }
+    // 先畫氫再畫氧，氧壓在上面
+    for (const el of ['H', 'O']) {
+      for (const p of at) {
+        if (p.el !== el) continue
+        ctx.beginPath(); ctx.arc(px(p.x), py(p.y), AR[el] * G.sc, 0, 2 * Math.PI)
+        ctx.fillStyle = C[el]; ctx.fill()
+        ctx.lineWidth = Math.max(1, G.sc * 0.05); ctx.strokeStyle = C[el + 'stroke']; ctx.stroke()
+      }
+    }
+  }
+  function drawLegend (items) {
+    let x = 14
+    const y = 24, r = G.narrow ? 7 : 9
+    ctx.font = font(G.font - 2); ctx.textBaseline = 'middle'; ctx.textAlign = 'left'
+    for (const [el, text] of items) {
+      ctx.beginPath(); ctx.arc(x + r, y, r, 0, 2 * Math.PI); ctx.fillStyle = C[el]; ctx.fill()
+      ctx.strokeStyle = C[el + 'stroke']; ctx.lineWidth = 1.5; ctx.stroke()
+      ctx.fillStyle = C.muted; ctx.fillText(text, x + 2 * r + 6, y)
+      x += 2 * r + 12 + ctx.measureText(text).width + 14
+    }
+  }
+  function drawTable () {
+    ctx.fillStyle = C.line
+    ctx.fillRect(0, py(FLOOR + WALL), G.W, Math.max(3, 0.25 * G.sc))
+  }
+  function strokeWall (path) {
+    ctx.strokeStyle = C.slate; ctx.lineWidth = Math.max(3, 2 * WALL * G.sc); ctx.lineJoin = 'round'
+    path(); ctx.stroke()
+  }
+  function caption (text, y) {
+    ctx.font = font(G.font, 500); ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'top'
+    ctx.fillText(text, G.W / 2, y)
+  }
+
+  function drawStates () {
+    drawLegend([['O', '氧原子'], ['H', '氫原子']])
+    drawTable()
+    if (A.box === 'square') strokeWall(() => { ctx.beginPath(); ctx.rect(px(-SQ), py(-SQ), 2 * SQ * G.sc, 2 * SQ * G.sc) })
+    if (A.box === 'circle') strokeWall(() => { ctx.beginPath(); ctx.arc(px(0), py(CY), R * G.sc, 0, 2 * Math.PI) })
+    for (const m of A.ms) drawMolecule(m)
+  }
+
+  function drawChange () {
+    drawLegend([['O', '氧原子'], ['H', '氫原子']])
+    drawTable()
+    if (B.sub === 'water') {
+      // 腳架與開口燒杯
+      ctx.strokeStyle = C.muted; ctx.lineWidth = Math.max(2, 0.18 * G.sc)
+      ctx.beginPath()
+      ctx.moveTo(px(BK.x0 - 0.5), py(BK.y1 + WALL)); ctx.lineTo(px(BK.x1 + 0.5), py(BK.y1 + WALL))
+      ctx.moveTo(px(BK.x0), py(BK.y1 + WALL)); ctx.lineTo(px(BK.x0 - 0.8), py(FLOOR + WALL))
+      ctx.moveTo(px(BK.x1), py(BK.y1 + WALL)); ctx.lineTo(px(BK.x1 + 0.8), py(FLOOR + WALL))
+      ctx.stroke()
+      strokeWall(() => { ctx.beginPath(); ctx.moveTo(px(BK.x0), py(BK.y0)); ctx.lineTo(px(BK.x0), py(BK.y1)); ctx.lineTo(px(BK.x1), py(BK.y1)); ctx.lineTo(px(BK.x1), py(BK.y0)) })
+      if (B.torch) drawFlame(px(0), py(FLOOR - 0.4), py(BK.y1 + 0.5), G.sc * 1.4)
+      drawTorchStick(px(0), py(FLOOR - 0.4), B.torch)
+    } else {
+      strokeWall(() => { ctx.beginPath(); ctx.rect(px(-SQ), py(-SQ), 2 * SQ * G.sc, 2 * SQ * G.sc) })
+      // 火把從左邊伸進容器
+      ctx.strokeStyle = C.sandStroke; ctx.lineWidth = Math.max(5, 0.5 * G.sc); ctx.lineCap = 'round'
+      ctx.beginPath(); ctx.moveTo(px(TORCH.x - 4.2), py(TORCH.y + 2.2)); ctx.lineTo(px(TORCH.x - 0.6), py(TORCH.y + 0.3)); ctx.stroke()
+      ctx.lineCap = 'butt'
+      if (B.torch) drawFlame(px(TORCH.x - 0.2), py(TORCH.y + 0.4), py(TORCH.y - 1.6), G.sc * 1.1)
+      for (const h of B.hot) {
+        ctx.beginPath(); ctx.arc(px(h.x), py(h.y), h.r * G.sc * (1.1 - h.t), 0, 2 * Math.PI)
+        ctx.fillStyle = `rgba(245, 166, 35, ${0.35 * h.t / 0.5})`; ctx.fill()
+      }
+    }
+    for (const m of B.ms) drawMolecule(m)
+  }
+  function drawTorchStick (x, y, lit) {
+    ctx.fillStyle = C.sandStroke
+    ctx.fillRect(x - G.sc * 0.25, y, G.sc * 0.5, py(FLOOR + WALL) - y)
+    if (!lit) { ctx.fillStyle = C.muted; ctx.fillRect(x - G.sc * 0.35, y - G.sc * 0.3, G.sc * 0.7, G.sc * 0.35) }
+  }
+  function drawFlame (x, yb, yt, w) {
+    const f = 1 + 0.08 * Math.sin(S.time * 30)
+    const h = (yb - yt) * f
+    ctx.beginPath()
+    ctx.moveTo(x - w / 2, yb)
+    ctx.quadraticCurveTo(x - w / 2, yb - h * 0.55, x, yb - h)
+    ctx.quadraticCurveTo(x + w / 2, yb - h * 0.55, x + w / 2, yb)
+    ctx.closePath(); ctx.fillStyle = 'rgba(245, 140, 30, 0.9)'; ctx.fill()
+    ctx.beginPath()
+    ctx.moveTo(x - w / 4, yb)
+    ctx.quadraticCurveTo(x - w / 4, yb - h * 0.35, x, yb - h * 0.6)
+    ctx.quadraticCurveTo(x + w / 4, yb - h * 0.35, x + w / 4, yb)
+    ctx.closePath(); ctx.fillStyle = 'rgba(255, 220, 90, 0.95)'; ctx.fill()
+  }
+
+  // 分離混合物：三個實驗站，各自 120 × 300 的座標
+  function makeGrains () {
+    const g = { sand: [], salt: [] }
+    for (let i = 0; i < 46; i++) g.sand.push({ u: Math.random(), v: Math.random(), r: rnd(2.2, 3.4) })
+    for (let i = 0; i < 24; i++) g.salt.push({ u: Math.random(), v: Math.random(), s: rnd(4, 6), a: rnd(-0.4, 0.4) })
+    Cs.grains = g
+  }
+  function drawSep () {
+    const { L, st, t } = shownLocs()
+    const k = Math.min((G.W - 16) / 372, (G.H - 70) / 300)
+    const x0 = (G.W - 372 * k) / 2, y0 = 46 + (G.H - 56 - 300 * k) / 2
+    const T = (i) => (x, y) => [x0 + (i * 126 + x) * k, y0 + y * k]
+    ctx.lineJoin = 'round'
+    ctx.fillStyle = C.line; ctx.fillRect(0, y0 + 291 * k, G.W, Math.max(3, 3 * k))
+    // 站 1：燒杯
+    let p = T(0)
+    drawBeakerBox(p, 22, 160, 98, 290, L.beaker, k, st && st.stir ? t : -1)
+    // 站 2：過濾
+    p = T(1)
+    ctx.strokeStyle = C.muted; ctx.lineWidth = Math.max(2, 2.5 * k)
+    line(p, 10, 290, 10, 70); line(p, 10, 96, 40, 96)
+    // 漏斗與濾紙
+    ctx.strokeStyle = C.slate; ctx.lineWidth = Math.max(2, 3 * k)
+    ctx.beginPath(); ctx.moveTo(...p(22, 90)); ctx.lineTo(...p(56, 140)); ctx.lineTo(...p(56, 182)); ctx.moveTo(...p(90, 90)); ctx.lineTo(...p(62, 140)); ctx.lineTo(...p(62, 182)); ctx.stroke()
+    ctx.strokeStyle = C.line; ctx.lineWidth = Math.max(1, 1.5 * k)
+    ctx.beginPath(); ctx.moveTo(...p(28, 90)); ctx.lineTo(...p(59, 134)); ctx.lineTo(...p(84, 90)); ctx.stroke()
+    // 濾紙上的固體（三角形區域）
+    const tri = (u, v) => { const yy = 132 - v * 30, half = (132 - yy) / 44 * 28; return p(59 + (u - 0.5) * 2 * half, yy) }
+    drawGrains(tri, L.filter, k, true)
+    if (st && st.drip) {
+      const yy = 182 + ((S.time * 140) % 60)
+      ctx.fillStyle = C.waterLine; ctx.beginPath(); ctx.arc(...p(59, Math.min(yy, 270)), 2.5 * k, 0, 2 * Math.PI); ctx.fill()
+      if (L.filter.sand + L.filter.saltS > 0) {
+        ctx.fillStyle = C.water; ctx.beginPath(); ctx.moveTo(...p(32, 96)); ctx.lineTo(...p(59, 132)); ctx.lineTo(...p(80, 96)); ctx.closePath(); ctx.globalAlpha = Math.sin(Math.PI * t); ctx.fill(); ctx.globalAlpha = 1
+      }
+    }
+    drawBeakerBox(p, 28, 200, 90, 290, L.flask, k, -1)
+    // 站 3：蒸發
+    p = T(2)
+    ctx.strokeStyle = C.muted; ctx.lineWidth = Math.max(2, 2.5 * k)
+    line(p, 12, 216, 98, 216); line(p, 22, 216, 14, 290); line(p, 88, 216, 96, 290)
+    // 酒精燈
+    ctx.fillStyle = C.slate
+    ctx.beginPath(); ctx.moveTo(...p(40, 290)); ctx.lineTo(...p(70, 290)); ctx.lineTo(...p(64, 262)); ctx.lineTo(...p(46, 262)); ctx.closePath(); ctx.fill()
+    ctx.fillRect(...p(53, 254), 4 * k, 8 * k)
+    const boiling = st && st.boil
+    if (boiling) drawFlame(...p(55, 254), p(0, 224)[1], 12 * k)
+    // 蒸發皿
+    const dish = L.dish
+    ctx.save()
+    ctx.beginPath(); ctx.ellipse(...p(55, 196), 38 * k, 18 * k, 0, 0, Math.PI); ctx.closePath(); ctx.clip()
+    if (dish.water > 0.01) { ctx.fillStyle = C.water; const lv = 196 + 16 * (1 - Math.min(1, dish.water)); ctx.fillRect(...p(15, lv), 80 * k, 30 * k) }
+    drawGrains((u, v) => p(25 + u * 60, 211 - v * 6), dish, k, false)
+    ctx.restore()
+    ctx.strokeStyle = C.slate; ctx.lineWidth = Math.max(2, 3 * k)
+    ctx.beginPath(); ctx.ellipse(...p(55, 196), 38 * k, 18 * k, 0, 0, Math.PI); ctx.stroke()
+    // 冷玻璃片與杯子
+    if (Cs.cover) {
+      ctx.strokeStyle = C.glass; ctx.lineWidth = Math.max(3, 4 * k)
+      line(p, 12, 140, 112, 170)
+      ctx.strokeStyle = C.muted; ctx.lineWidth = Math.max(1.5, 2 * k); line(p, 112, 172, 112, 248)
+      drawBeakerBox(p, 100, 250, 124, 290, L.cup, k, -1, true)
+    }
+    if (boiling) {
+      ctx.strokeStyle = C.muted; ctx.lineWidth = Math.max(1, 1.5 * k)
+      for (let i = 0; i < 4; i++) {
+        const ph = (S.time * 0.9 + i / 4) % 1, xx = 35 + i * 13, top = Cs.cover ? 146 + (xx - 12) * 0.3 : 110
+        const y1 = 190 - ph * (190 - top - 6)
+        ctx.globalAlpha = 1 - ph
+        ctx.beginPath(); ctx.moveTo(...p(xx, y1)); ctx.quadraticCurveTo(...p(xx + 5, y1 - 6), ...p(xx, y1 - 12)); ctx.stroke()
+      }
+      ctx.globalAlpha = 1
+      if (Cs.cover) {
+        const yy = 172 + ((S.time * 90) % 76)
+        ctx.fillStyle = C.waterLine; ctx.beginPath(); ctx.arc(...p(112, yy), 2.2 * k, 0, 2 * Math.PI); ctx.fill()
+      }
+    }
+    // 站名
+    ctx.font = font(G.font, 500); ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'top'
+    ;[['燒杯', 0, 60], ['過濾', 1, 59], ['蒸發', 2, 60]].forEach(([s, i, x]) => ctx.fillText(s, ...T(i)(x, 52)))
+    ctx.font = font(G.font - 3); ctx.fillStyle = C.muted; ctx.textBaseline = 'bottom'
+    ctx.fillText('濾紙', ...T(1)(59, 88)); if (Cs.cover) ctx.fillText('冷玻璃片', ...T(2)(56, 136))
+  }
+  function line (p, xa, ya, xb, yb) { ctx.beginPath(); ctx.moveTo(...p(xa, ya)); ctx.lineTo(...p(xb, yb)); ctx.stroke() }
+  function drawBeakerBox (p, xa, ya, xb, yb, l, k, stir, small) {
+    const ih = yb - ya
+    if (l.water > 0.01) {
+      ctx.fillStyle = C.water
+      const lv = yb - ih * 0.62 * Math.min(1, l.water)
+      ctx.fillRect(...p(xa, lv), (xb - xa) * k, (yb - lv) * k)
+      ctx.strokeStyle = C.waterLine; ctx.lineWidth = Math.max(1, 1.5 * k); line(p, xa, lv, xb, lv)
+    }
+    if (!small) drawGrains((u, v) => p(xa + 6 + u * (xb - xa - 12), yb - 5 - v * 18), l, k, false)
+    if (stir >= 0) {
+      ctx.strokeStyle = C.muted; ctx.lineWidth = Math.max(2, 3 * k)
+      const sx = (xa + xb) / 2 + 20 * Math.sin(stir * 18)
+      line(p, sx - 6, ya - 20, sx + 4, yb - 8)
+    }
+    ctx.strokeStyle = C.slate; ctx.lineWidth = Math.max(2, 3 * k)
+    ctx.beginPath(); ctx.moveTo(...p(xa, ya)); ctx.lineTo(...p(xa, yb)); ctx.lineTo(...p(xb, yb)); ctx.lineTo(...p(xb, ya)); ctx.stroke()
+  }
+  // 沙子在下層，食鹽固體疊在上層
+  function drawGrains (at, l, k, onPaper) {
+    const g = Cs.grains
+    if (l.sand > 0.01) {
+      ctx.globalAlpha = Math.min(1, l.sand)
+      for (const s of g.sand) {
+        const [x, y] = at(s.u, onPaper ? s.v * 0.55 : s.v * 0.6)
+        ctx.beginPath(); ctx.arc(x, y, s.r * k, 0, 2 * Math.PI); ctx.fillStyle = C.sand; ctx.fill()
+        ctx.strokeStyle = C.sandStroke; ctx.lineWidth = 1; ctx.stroke()
+      }
+    }
+    if (l.saltS > 0.01) {
+      ctx.globalAlpha = Math.min(1, l.saltS)
+      for (const s of g.salt) {
+        const base = l.sand > 0.5 ? 0.45 : 0
+        const [x, y] = at(s.u, base + s.v * (onPaper ? 0.4 : 0.55))
+        ctx.save(); ctx.translate(x, y); ctx.rotate(s.a)
+        const w = s.s * k
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(-w / 2, -w / 2, w, w)
+        ctx.strokeStyle = C.Hstroke; ctx.lineWidth = 1; ctx.strokeRect(-w / 2, -w / 2, w, w)
+        ctx.restore()
+      }
+    }
+    ctx.globalAlpha = 1
+  }
+
+  function draw () {
+    ctx.clearRect(0, 0, G.W, G.H)
+    ctx.fillStyle = C.card; ctx.fillRect(0, 0, G.W, G.H)
+    if (S.scene === 'states') drawStates()
+    else if (S.scene === 'change') drawChange()
+    else drawSep()
+  }
+
+  // ---------- 讀數 ----------
+  const ST_NAME = { solid: '固態', liquid: '液態', gas: '氣態' }
+  function meanGap (ms) {
+    if (ms.length < 2) return null
+    let sum = 0
+    for (const p of ms) {
+      let best = Infinity
+      for (const q of ms) if (q !== p) best = Math.min(best, Math.hypot(q.x - p.x, q.y - p.y))
+      sum += best
+    }
+    return sum / ms.length
+  }
+  let lastOut = '', gapT = -1, gapV = null
+  function updateReadouts () {
+    let rows
+    if (S.scene === 'states') {
+      const lv = live()
+      if (S.time - gapT > 0.5) { gapT = S.time; gapV = meanGap(lv) }
+      const spd = lv.reduce((s, m) => s + (m.phase === 's' ? 0.3 : Math.hypot(m.vx, m.vy)), 0) / Math.max(1, lv.length)
+      rows = [['狀態', ST_NAME[A.st]], ['畫面中的水分子', `${lv.length} 個`],
+        ['最近分子的平均距離', gapV === null ? '—' : `${gapV.toFixed(2)} 個分子寬`],
+        ['分子運動', spd < 0.6 ? '在原位振動' : spd < 2.5 ? '慢慢移動' : '快速亂跑']]
+    } else if (S.scene === 'change') {
+      const c = countB()
+      const kind = !B.changed ? '—' : B.sub === 'water' ? '物理變化' : '化學變化'
+      const mol = B.sub === 'water' ? `水 ${c.l}、水蒸氣 ${c.g}` : `H₂ ${c.H2}、O₂ ${c.O2}、H₂O ${c.H2O}`
+      rows = [['變化', kind], ['分子', mol], ['氫原子', `${c.H} 個`], ['氧原子', `${c.O} 個`]]
+    } else {
+      const L = Cs.anim ? Cs.anim.from : Cs.locs
+      rows = [['濾紙上', describe(L.filter)], ['蒸發皿', describe(L.dish)], ['收集到的水', describe(L.cup)],
+        ['結果', separated() ? '分成三種純物質' : '還沒分開']]
+    }
+    const key = JSON.stringify(rows)
+    if (key === lastOut) return
+    lastOut = key
+    rows.forEach(([l, v], i) => { $(`#rl${i}`).textContent = l; $(`#rv${i}`).textContent = v })
+  }
+
+  // ---------- 控制板 ----------
+  function syncControls () {
+    document.querySelectorAll('[data-scene]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.scene === S.scene))
+    document.querySelectorAll('[data-for]').forEach((el) => { el.hidden = el.dataset.for !== S.scene })
+    document.querySelectorAll('[data-st]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.st === A.st))
+    document.querySelectorAll('[data-box]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.box === A.box))
+    document.querySelectorAll('[data-sub]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.sub === B.sub))
+    $('#btnTorch').textContent = B.torch ? '移走火把' : '點燃火把'
+    $('#subNote').textContent = B.sub === 'water' ? '燒杯裡是水，火把在燒杯下方加熱。' : '容器裡有 16 個氫分子和 8 個氧分子，火把從左邊伸進容器。'
+    document.querySelectorAll('[data-act]').forEach((b) => { b.disabled = !!Cs.anim })
+    $('#cover').disabled = !!Cs.anim
+    $('#cMsg').textContent = Cs.msg
+  }
+  function renderLog () { $('#cLog').innerHTML = Cs.log.map((s) => `<li>${s}</li>`).join('') }
+
+  document.querySelectorAll('[data-scene]').forEach((b) => b.addEventListener('click', () => { S.scene = b.dataset.scene; lastOut = ''; syncControls(); renderTasks() }))
+  document.querySelectorAll('[data-st]').forEach((b) => b.addEventListener('click', () => { if (A.st !== b.dataset.st) { setState(b.dataset.st); syncControls() } }))
+  document.querySelectorAll('[data-box]').forEach((b) => b.addEventListener('click', () => {
+    if (A.box === b.dataset.box) return
+    A.box = b.dataset.box; A.since = S.time
+    if (A.st === 'solid') toSolid()
+    syncControls()
+  }))
+  $('#btnResetA').addEventListener('click', () => { resetA(); syncControls() })
+  document.querySelectorAll('[data-sub]').forEach((b) => b.addEventListener('click', () => { if (B.sub !== b.dataset.sub) { B.sub = b.dataset.sub; resetB(); syncControls() } }))
+  $('#btnTorch').addEventListener('click', () => { B.torch = !B.torch; syncControls() })
+  $('#btnResetB').addEventListener('click', () => { resetB(); syncControls() })
+  $('#cActs').addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (b) act(b.dataset.act) })
+  $('#cover').addEventListener('change', (e) => { Cs.cover = e.target.checked })
+  $('#btnResetC').addEventListener('click', () => { resetC(); syncControls(); renderLog() })
+  $('#btnTaskReset').addEventListener('click', () => { for (const k in done) delete done[k]; A.seen = {}; renderTasks() })
+
+  // ---------- 主迴圈 ----------
+  function advance (dt) {
+    S.time += dt
+    const n = Math.max(1, Math.ceil(dt / (1 / 240))), h = dt / n
+    if (S.scene === 'states') {
+      for (let i = 0; i < n; i++) physics(A.ms, h, boundsA, paramA)
+      stepSolid(A.ms, dt)
+    } else if (S.scene === 'change') {
+      for (let i = 0; i < n; i++) physics(B.ms, h, boundsB, paramB)
+      stepB(dt)
+    } else stepC(dt)
+    checkTasks()
+  }
+  let lastTs = null
+  function frame (ts) {
+    const dt = lastTs === null ? 0 : Math.min(0.05, (ts - lastTs) / 1000)
+    lastTs = ts
+    if (dt > 0) advance(dt)
+    draw(); updateReadouts()
+    requestAnimationFrame(frame)
+  }
+
+  readColors()
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors)
+  window.addEventListener('resize', layout)
+  layout(); makeGrains(); resetA(); resetB(); resetC(); syncControls(); renderTasks()
+  requestAnimationFrame(frame)
+
+  // 給之後的學習單與測試用
+  window.matterSim = { S, A, B, Cs, advance, setState, act, countB, describe, separated, latticeSites, meanGap, done, tasks: TASKS.map((t) => t.id), geom: { SQ, R, CY, FLOOR } }
+})()
+</script>
+</body>
+</html>
