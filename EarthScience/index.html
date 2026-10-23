@@ -244,7 +244,7 @@ const textbookOf = (code) => textbook.filter(h => h.codes.includes(code))
 
 
 // 畫面狀態：view 為 code（依條目）或 sim（依模擬）
-const state = { stage:stages[0].id, view:'code', theme:'all', cover:'all', open:{} }
+const state = { stage:'J', view:'hanlin', theme:'all', cover:'all', open:{} }
 
 // 條目 → 對應模擬（分主要與延伸）
 const simsFor = (code) => ({
@@ -261,8 +261,8 @@ const UNIT_PREFIX = '../'
 const escHtml = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 const myUnits = (code) => (window.UNITS || []).filter(u => u.status !== 'external' && u.codes.includes(code))
 const hasMine = (code) => myUnits(code).length > 0
-const mineLine = (code) => {
-  const us = myUnits(code)
+const mineLine = (code) => mineList(myUnits(code))
+const mineList = (us) => {
   if (!us.length) return ''
   const p = Site.prefs()
   const item = (u) => u.status === 'ready'
@@ -270,6 +270,14 @@ const mineLine = (code) => {
     : `${escHtml(u.title)} <span class="sl-badge sl-badge-amber">只有教案</span>`
   return `<div class="sl-text-body">我的單元：${us.map(item).join('、')}</div>`
 }
+
+// 我的單元也算模擬：三種模式都有的單元當成「主要對應」放在清單最前面，統計、依模擬、依康軒章節都會算到
+;(window.UNITS || []).filter(u => u.status === 'ready').reverse().forEach(u => {
+  const p = Site.prefs()
+  sims.unshift({ id: 'mine-' + u.id, t: escHtml(u.title), cat: '我的單元', url: escHtml(Site.unitUrl(u, p.mode, p.cls, UNIT_PREFIX)), q: escHtml(u.meta), main: u.codes.slice(), ext: [], mine: u.id })
+})
+// 我的單元連結在同一分頁開啟（寫入「繼續上次」）；外部模擬另開分頁
+const simLinkAttrs = (s) => s.mine ? `data-unit="${s.mine}"` : 'target="_blank" rel="noopener"'
 
 const renderSummary = () => {
   const codes = codesOfStage(state.stage)
@@ -306,7 +314,7 @@ const renderFilters = () => {
   const stageBtns = stages.map(s => btn(`${s.name}`, state.stage === s.id, `data-stage="${s.id}"`)).join('')
   const viewBtns = btn('依條目', state.view === 'code', 'data-view="code"') + btn('依模擬', state.view === 'sim', 'data-view="sim"') + btn('依康軒章節', state.view === 'hanlin', 'data-view="hanlin"')
   // 依模擬時每張卡片已列出三個階段，所以不顯示階段篩選
-  let html = row('檢視', viewBtns) + (state.view === 'code' && stages.length > 1 ? row('階段', stageBtns) : '')
+  let html = row('檢視', viewBtns) + (state.view !== 'sim' && stages.length > 1 ? row('階段', stageBtns) : '')
   if (state.view === 'code') {
     const themeBtns = [btn('全部主題', state.theme === 'all', 'data-theme-f="all"')]
       .concat(themesOfStage(state.stage).map(t => {
@@ -321,7 +329,7 @@ const renderFilters = () => {
 
 // 模擬小卡（依條目檢視時展開用）
 const simMini = (s, kind) => `
-  <a class="sl-card" href="${s.url}" target="_blank" rel="noopener" style="display: grid; gap: var(--space-1); border: 1px solid var(--line); color: var(--ink); text-decoration: none; min-width: 0;">
+  <a class="sl-card" href="${s.url}" ${simLinkAttrs(s)} style="display: grid; gap: var(--space-1); border: 1px solid var(--line); color: var(--ink); text-decoration: none; min-width: 0;">
     <span style="display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center;"><span class="sl-text-label">${s.t}</span>${kind === 'main' ? '<span class="sl-badge sl-badge-success">主要對應</span>' : '<span class="sl-badge sl-badge-amber">延伸可用</span>'}</span>
     <span class="sl-text-caption" style="color: var(--ink-muted);">${s.cat}．${s.q}</span>
   </a>`
@@ -394,7 +402,7 @@ const simCard = (s) => {
   const note = hl + (s.note ? `<div class="sl-text-caption" style="color: var(--ink-muted);">${s.note}</div>` : '')
   return `
     <article class="sl-card" style="display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; border: 1px solid var(--line);">
-      <a href="${s.url}" target="_blank" rel="noopener" class="sl-text-label" style="color: var(--ink); font-size: 15px; line-height: 22px;">${s.t}</a>
+      <a href="${s.url}" ${simLinkAttrs(s)} class="sl-text-label" style="color: var(--ink); font-size: 15px; line-height: 22px;">${s.t}</a>
       <div class="sl-text-caption" style="color: var(--ink-muted);">${s.q}</div>
       <div style="display: grid; gap: var(--space-2); margin-top: auto;">${codes}</div>
       ${note}
@@ -414,9 +422,9 @@ const renderBySim = () => {
 // 依康軒章節：每章列出條目，並可展開這章能用的模擬
 const hanlinCard = (h) => {
   const isOpen = !!state.open['h:' + h.id]
-  const tags = h.codes.map(c => `<span class="sl-badge ${isCovered(c) ? 'sl-badge-success' : 'sl-badge-danger'}" title="${codeText[c]}">${c}</span>`).join('')
+  const tags = h.codes.map(c => `<div class="sl-text-caption" style="display: flex; gap: var(--space-2); align-items: baseline;"><span class="sl-badge ${isCovered(c) ? 'sl-badge-success' : 'sl-badge-danger'}" style="flex: none;">${c}</span><span style="color: var(--ink-muted);">${codeText[c] || ''}</span></div>`).join('')
+  const mineHere = mineList((window.UNITS || []).filter(u => u.status !== 'external' && u.codes.some(c => h.codes.includes(c))))
   const usable = sims.filter(s => h.codes.some(c => s.main.includes(c) || s.ext.includes(c)))
-  const missing = h.codes.filter(c => !isCovered(c))
   const status = usable.length
     ? `<span class="sl-badge sl-badge-success">可用模擬 ${usable.length} 個</span>`
     : '<span class="sl-badge sl-badge-danger">沒有模擬</span>'
@@ -427,17 +435,14 @@ const hanlinCard = (h) => {
   const grid = isOpen
     ? `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-2); margin-top: var(--space-3);">${usable.map(s => simMini(s, kindOf(s))).join('')}</div>`
     : ''
-  const gap = missing.length
-    ? `<div class="sl-text-caption" style="color: var(--ink-muted);">還沒有模擬：${missing.map(c => `${c} ${codeText[c].replace(/。$/, '')}`).join('；')}</div>`
-    : ''
   return `
     <div class="sl-card">
       <div style="display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; justify-content: space-between;">
         <div style="display: grid; gap: var(--space-1); flex: 1 1 260px; min-width: 0;">
           <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center;"><span class="sl-text-label">${h.ch}</span><span class="sl-badge">${h.subj}</span>${status}</div>
           <div class="sl-text-caption" style="color: var(--ink-muted);">${h.secs}</div>
-          <div style="display: flex; flex-wrap: wrap; gap: var(--space-1);">${tags}</div>
-          ${gap}
+          <div style="display: grid; gap: var(--space-1);">${tags}</div>
+          ${mineHere}
         </div>
         ${action}
       </div>
@@ -493,7 +498,7 @@ document.getElementById('app').addEventListener('click', (e) => {
   const t = e.target.closest('button')
   if (!t) return
   const d = t.dataset
-  if (d.stage) { state.stage = d.stage; state.theme = 'all' }
+  if (d.stage) { state.stage = d.stage; state.theme = 'all'; state.view = d.stage === 'J' ? 'hanlin' : 'code' }
   else if (d.view) { state.view = d.view }
   else if (d.themeF) { state.theme = d.themeF }
   else if (d.cover) { state.cover = d.cover }
