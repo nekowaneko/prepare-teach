@@ -166,13 +166,15 @@
         <button class="sl-btn" data-st="gas" aria-pressed="true">氣體</button>
         <button class="sl-btn" data-st="liquid" aria-pressed="false">液體</button>
         <button class="sl-btn" data-st="solid" aria-pressed="false">固體</button>
+        <button class="sl-btn" data-st="vacuum" aria-pressed="false" hidden>真空</button>
       </div>
+      <p class="note sl-text-caption" id="mediumNote" hidden>這裡換的是左半邊的介質；右半邊固定是 20°C 的空氣。</p>
       <div class="seg" role="group" aria-label="介質種類" id="segMedium"></div>
       <p class="note sl-text-caption" id="rhoSrc"></p>
       <div class="field">
         <div class="field-head"><label class="sl-text-label" for="temp">溫度</label><output class="sl-text-label" id="tempOut"></output></div>
         <input type="range" id="temp" min="-190" max="100" step="10" value="20">
-        <p class="note sl-text-caption">溫度越高，粒子自己亂動得越厲害。</p>
+        <p class="note sl-text-caption" id="tempNote">溫度越高，粒子自己亂動得越厲害。</p>
       </div>
     </div>
 
@@ -184,12 +186,6 @@
         <button class="sl-btn" data-slow="4000" aria-pressed="false">慢 4000 倍</button>
       </div>
       <p class="note sl-text-caption">真實的聲音太快，畫面放慢播放；粒子的位移也放大了。</p>
-    </div>
-
-    <div class="sl-card">
-      <h2 class="sl-text-label">紀錄</h2>
-      <p class="note sl-text-caption">把目前的介質、溫度、密度和聲速記到紀錄表。</p>
-      <div class="actions"><button class="sl-btn" type="button" id="btnLog">記錄數據</button><span class="note sl-text-caption" id="logCount"></span></div>
     </div>
 
     <div class="sl-card" id="taskCard">
@@ -230,12 +226,21 @@
       { id: 'iron', name: '鐵', wiki: '铁', v: () => 5130, rho: () => 7870, tr: [-270, 1530] }, // 1538°C 熔化
       { id: 'al', name: '鋁', wiki: '铝', v: () => 5000, rho: () => 2700, tr: [-270, 660] }, // 660°C 熔化
       { id: 'wood', name: '木頭', wiki: '木材', v: () => 3500, rho: () => 500, tr: [-270, 200] } // 不會熔化，約 200°C 以上開始熱分解
+    ],
+    // 真空：只在 STEP 1 的左右兩種介質場景出現；只有 3 顆溫度 3 K 的自由粒子，聲音傳不過去
+    vacuum: [
+      { id: 'vac', name: '真空', wiki: '真空', v: () => 0, rho: () => 0, tr: [20, 20] }
     ]
   }
+  const STATE_LABEL = { gas: '氣體', liquid: '液體', solid: '固體', vacuum: '真空' }
+  // STEP 1 場景：介質區從中間分成兩半，左半邊是可換的介質，右半邊固定是 20°C 空氣
+  const SPLIT_D = HM / 2
+  const AIR = MEDIA.gas[0]
+  const VAC_K = 3 // 真空裡自由粒子的溫度（K）
 
   const S = {
     mode: 'cont', emitting: false, paused: false, vol: 5, f: 400, refl: true, L: 2.0,
-    st: 'gas', mid: 'air', T: 20, slow: 250, ang: 0,
+    st: 'gas', mid: 'air', T: 20, slow: 250, ang: 0, split: false, lockT: null, reflSaved: true,
     simT: 0, clock: 0, env: 0, amp: 0, phase: 0, hT: [], hV: [], h0: 0, pulses: [], lastPulse: null, echo: null
   }
 
@@ -244,7 +249,14 @@
   const density = () => medium().rho(S.T)
   const lambda = () => speed() / S.f
   // 位移振幅（公尺，畫面上誇大）：讓疏密程度隨音量變化，但粒子不互相穿越
-  const ampAt = (f) => Math.min(S.vol / 10 * 0.8 * (speed() / f) / (2 * Math.PI), S.vol * 0.017)
+  const ampFor = (v, f) => Math.min(S.vol / 10 * 0.8 * (v / f) / (2 * Math.PI), S.vol * 0.017)
+  // 兩種介質時，喇叭振幅以右半邊的空氣為準再減半：傳進空氣的位移最多變成 2 倍，粒子才不會互相穿越
+  const ampAt = (f) => S.split ? ampFor(AIR.v(20), f) / 2 : ampFor(speed(), f)
+  // 介面的反射與透射（位移）：R = (Z1 − Z2)/(Z1 + Z2)，T = 2Z1/(Z1 + Z2)，Z = 密度 × 聲速
+  function interfaceRT () {
+    const z1 = density() * speed(), z2 = AIR.rho(20) * AIR.v(20)
+    return z1 === 0 ? { R: 0, T: 0 } : { R: (z1 - z2) / (z1 + z2), T: 2 * z1 / (z1 + z2) }
+  }
 
   // ---------- 任務（成功判定） ----------
   const TASKS = [
@@ -300,6 +312,15 @@
   let ux = 0, uy = 0
   function disp (x, y, w) {
     const v = speed()
+    if (S.split) {
+      // 一維兩種介質：左半邊有入射波與介面的反射波，右半邊只有透射波；真空裡沒有波
+      uy = 0
+      const { R, T } = interfaceRT()
+      if (v === 0) { ux = 0; return }
+      if (x < SPLIT_D) ux = srcAt(S.simT - x / v) + R * srcAt(S.simT - (2 * SPLIT_D - x) / v)
+      else ux = T * srcAt(S.simT - SPLIT_D / v - (x - SPLIT_D) / AIR.v(20))
+      return
+    }
     ux = srcAt(S.simT - x / v); uy = 0
     if (!S.refl) return
     const k = 2 * ((x - w.px) * w.nx + (y - w.py) * w.ny)
@@ -339,11 +360,12 @@
         if (!p.echoed && S.simT >= p.t0 + 2 * S.L / v) { p.echoed = true; S.echo = 2 * S.L / v }
       }
     }
-    // 丟掉已經傳出畫面的歷史
-    const keep = S.simT - 2 * HM / v - 0.02
+    // 丟掉已經傳出畫面的歷史；兩種介質時以比較慢的那一邊為準，真空時聲音傳不出去
+    const vt = !S.split ? v : v === 0 ? Infinity : Math.min(v, AIR.v(20))
+    const keep = S.simT - 2 * HM / vt - 0.02
     while (S.h0 < S.hT.length - 2 && S.hT[S.h0] < keep) S.h0++
     if (S.h0 > 5000) { S.hT.splice(0, S.h0); S.hV.splice(0, S.h0); S.h0 = 0 }
-    S.pulses = S.pulses.filter((p) => S.simT - p.t0 < p.dur + 2 * HM / v)
+    S.pulses = S.pulses.filter((p) => S.simT - p.t0 < p.dur + 2 * HM / vt)
   }
   function emitPulse () {
     const p = { t0: S.simT, dur: 2 / S.f, f: S.f, A: ampAt(S.f), echoed: false }
@@ -390,14 +412,15 @@
     let seed = 7
     const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 }
     const c = G.cell
-    G.r = Math.max(1.8, c * { gas: 0.1, liquid: 0.085, solid: 0.075 }[S.st])
-    const cellPts = () => {
+    const radius = (st) => Math.max(1.8, c * { gas: 0.1, liquid: 0.085, solid: 0.075 }[st])
+    G.r = radius(S.st === 'vacuum' ? 'gas' : S.st)
+    const cellPts = (st) => {
       const pts = []
-      if (S.st === 'solid') {
+      if (st === 'solid') {
         for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) pts.push([(i + 0.5) / 3, (j + 0.5) / 3])
-      } else if (S.st === 'liquid') {
+      } else if (st === 'liquid') {
         for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) pts.push([(i + 0.5) / 3 + (rnd() - 0.5) * 0.2, (j + 0.5) / 2 + (rnd() - 0.5) * 0.25])
-      } else {
+      } else if (st === 'gas') {
         for (let k = 0; k < 3; k++) pts.push([0.1 + rnd() * 0.8, 0.1 + rnd() * 0.8])
       }
       return pts
@@ -405,20 +428,30 @@
     parts = []
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < G.cols; col++) {
-        for (const [u, v] of cellPts()) {
-          parts.push({ d: (col + u) * c / G.ppm, ym: (8 - row - v) * c / G.ppm, row,
+        // 兩種介質時，格子中心在右半邊的固定放空氣
+        const st = S.split && (col + 0.5) * c / G.ppm >= SPLIT_D ? 'gas' : S.st
+        for (const [u, v] of cellPts(st)) {
+          parts.push({ d: (col + u) * c / G.ppm, ym: (8 - row - v) * c / G.ppm, row, st, r: radius(st),
             ph1: rnd() * 2 * Math.PI, ph2: rnd() * 2 * Math.PI, w1: 5 + rnd() * 5, w2: 5 + rnd() * 5, red: false })
         }
       }
     }
+    // 真空：左半邊只有 3 顆自由粒子，慢慢直線飄動、碰到邊界反彈
+    if (S.split && S.st === 'vacuum') {
+      for (let k = 0; k < 3; k++) {
+        parts.push({ free: true, st: 'vacuum', r: radius('gas'), d0: 0.2 + rnd() * (SPLIT_D - 0.4), y0: 0.1 + rnd() * (G.hm - 0.2),
+          vx: (rnd() - 0.5) * 0.06, vy: (rnd() - 0.5) * 0.06, row: -1, red: false })
+      }
+    }
     pickTracers()
   }
-  // 紅色粒子：有反射板時在喇叭與反射板的正中間，沒有時在 2 公尺處；每一列網格挑一顆
+  // 紅色粒子：有反射板時在喇叭與反射板的正中間，沒有時在 2 公尺處，兩種介質時在右半邊中間；每一列網格挑一顆
   function pickTracers () {
-    G.redD = S.refl ? S.L / 2 : 2
+    G.redD = S.split ? SPLIT_D * 1.5 : S.refl ? S.L / 2 : 2
     const best = []
     for (const p of parts) {
       p.red = false
+      if (p.free) continue
       const e = Math.abs(p.d - G.redD)
       if (!best[p.row] || e < best[p.row].e) best[p.row] = { p, e }
     }
@@ -475,23 +508,44 @@
 
     // 粒子：聲波位移＋溫度造成的熱擾動（紅色粒子也有）
     const tk = (S.T + 273.15) / 293.15
-    const jitter = Math.min(G.cell * { gas: 0.09, liquid: 0.05, solid: 0.03 }[S.st] * tk, G.cell * 0.14)
+    const jit = {}
+    for (const st of ['gas', 'liquid', 'solid']) jit[st] = Math.min(G.cell * { gas: 0.09, liquid: 0.05, solid: 0.03 }[st] * tk, G.cell * 0.14)
     const jspeed = Math.sqrt(tk)
+    // 在 [lo, hi] 之間來回反彈
+    const bounce = (a, lo, hi) => { const L = hi - lo, m = ((a - lo) % (2 * L) + 2 * L) % (2 * L); return lo + (m < L ? m : 2 * L - m) }
     const plain = [], reds = []
     for (const p of parts) {
+      if (p.free) {
+        // 真空的自由粒子：3 K 幾乎不抖動，只照自己的速度飄
+        const s = Math.sqrt(VAC_K / 293.15) * S.clock
+        plain.push(X(bounce(p.d0 + p.vx * s * 10, 0.05, SPLIT_D - 0.05)), Y(bounce(p.y0 + p.vy * s * 10, 0.05, G.hm - 0.05)), p.r)
+        continue
+      }
       if (!visible(p.d, p.ym, w)) continue
       disp(p.d, p.ym, w)
+      const j = jit[p.st]
       ;(p.red ? reds : plain).push(
-        X(p.d + ux) + jitter * Math.sin(p.w1 * jspeed * S.clock + p.ph1),
-        Y(p.ym + uy) + jitter * Math.sin(p.w2 * jspeed * S.clock + p.ph2))
+        X(p.d + ux) + j * Math.sin(p.w1 * jspeed * S.clock + p.ph1),
+        Y(p.ym + uy) + j * Math.sin(p.w2 * jspeed * S.clock + p.ph2), p.r)
     }
-    const dots = (arr, r) => {
+    const dots = (arr, k) => {
       ctx.beginPath()
-      for (let i = 0; i < arr.length; i += 2) { ctx.moveTo(arr[i] + r, arr[i + 1]); ctx.arc(arr[i], arr[i + 1], r, 0, 2 * Math.PI) }
+      for (let i = 0; i < arr.length; i += 3) { const r = arr[i + 2] * k; ctx.moveTo(arr[i] + r, arr[i + 1]); ctx.arc(arr[i], arr[i + 1], r, 0, 2 * Math.PI) }
       ctx.fill()
     }
-    ctx.fillStyle = C.muted; dots(plain, G.r)
-    ctx.fillStyle = C.danger; dots(reds, G.r * 1.6)
+    ctx.fillStyle = C.muted; dots(plain, 1)
+    ctx.fillStyle = C.danger; dots(reds, 1.6)
+
+    // 兩種介質：中間的分界線，上方標出左右的介質
+    if (S.split) {
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.setLineDash([8, 6])
+      ctx.beginPath(); ctx.moveTo(X(SPLIT_D), yTop - 6); ctx.lineTo(X(SPLIT_D), yBot + 6); ctx.stroke()
+      ctx.setLineDash([])
+      ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.font = font(G.font, '500 ')
+      ctx.fillText(S.st === 'vacuum' ? `真空（${VAC_K} K）` : medium().name, X(SPLIT_D / 2), yTop - 26)
+      ctx.fillText('空氣（固定）', X(SPLIT_D * 1.5), yTop - 26)
+    }
 
     // 反射板：擋住的那一側塗滿，再畫板子
     if (S.refl) {
@@ -543,8 +597,8 @@
 
     // 喇叭（在左邊，朝右）
     const cy = (yTop + yBot) / 2, sh = Math.min(150, G.reg * 0.6), depth = G.narrow ? 26 : 38
-    disp(0, G.hm / 2, w)
-    const dia = x0 - 2 + ux * ppm
+    // 振膜照聲源的位移動；真空裡也照樣振動，只是傳不出去
+    const dia = x0 - 2 + srcAt(S.simT) * ppm
     ctx.fillStyle = C.slate
     ctx.beginPath()
     ctx.moveTo(dia, cy - sh / 2); ctx.lineTo(dia, cy + sh / 2)
@@ -560,7 +614,8 @@
     ctx.fillStyle = C.muted; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
     ctx.font = font(G.font - 2)
     const since = S.lastPulse ? `　發出後 ${((S.simT - S.lastPulse.t0) * 1000).toFixed(1)} ms` : ''
-    ctx.fillText(`${medium().name} ${S.T}°C　畫面慢 ${S.slow} 倍${since}${S.paused ? '　已暫停' : ''}`, 12, H - 18)
+    const where = S.split ? `左：${S.st === 'vacuum' ? `真空 ${VAC_K} K` : `${medium().name} ${S.T}°C`}　右：空氣 20°C` : `${medium().name} ${S.T}°C`
+    ctx.fillText(`${where}　畫面慢 ${S.slow} 倍${since}${S.paused ? '　已暫停' : ''}`, 12, H - 18)
   }
 
   // ---------- 讀數 ----------
@@ -569,14 +624,19 @@
   function updateReadouts () {
     const v = speed(), lam = lambda(), rho = density()
     const vals = [
-      `${fmt(v, 0)} m/s`,
-      lam > HM ? `${fmt(lam, 1)} m` : `${fmt(lam, 2)} m`,
+      v === 0 ? '—' : `${fmt(v, 0)} m/s`,
+      v === 0 ? '—' : lam > HM ? `${fmt(lam, 1)} m` : `${fmt(lam, 2)} m`,
       rho < 10 ? `${fmt(rho, 2)} kg/m³` : `${fmt(rho, 0)} kg/m³`,
       S.echo === null ? '—' : `${fmt(S.echo * 1000, 2)} ms`
     ]
-    const key = vals.join('|')
+    const key = vals.join('|') + S.split
     if (key === lastOut) return
     lastOut = key
+    // 兩種介質時，讀數是左半邊的介質
+    const pre = S.split ? '左半邊' : ''
+    $('#outV').previousElementSibling.textContent = `${pre}聲速`
+    $('#outLam').previousElementSibling.textContent = `${pre}波長`
+    $('#outRho').previousElementSibling.textContent = `${pre}介質密度`
     $('#outV').textContent = vals[0]; $('#outLam').textContent = vals[1]
     $('#outRho').textContent = vals[2]; $('#outEcho').textContent = vals[3]
   }
@@ -586,20 +646,28 @@
     $('#volOut').value = `${S.vol}`
     $('#freqOut').value = `${S.f} Hz`
     $('#distOut').value = `${S.L.toFixed(1)} m`
+    $('#refl').checked = S.refl
+    $('#refl').disabled = S.split
     $('#dist').disabled = !S.refl
     $('#ang').disabled = !S.refl
     $('#angOut').value = `${S.ang}°`
     const m = medium()
     const t = $('#temp')
     t.min = m.tr[0]; t.max = m.tr[1]
+    if (S.lockT !== null) S.T = S.lockT
     S.T = Math.round(Math.min(m.tr[1], Math.max(m.tr[0], S.T)) / 10) * 10
     t.value = S.T
-    $('#tempOut').value = `${S.T} °C`
+    t.disabled = S.lockT !== null
+    $('#tempOut').value = S.st === 'vacuum' ? `${VAC_K} K` : `${S.T} °C`
+    $('#tempNote').textContent = S.lockT !== null ? `這一步固定在 ${S.lockT}°C。` : '溫度越高，粒子自己亂動得越厲害。'
+    $('#mediumNote').hidden = !S.split
+    document.querySelector('[data-st="vacuum"]').hidden = !S.split
     document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.mode === S.mode))
     document.querySelectorAll('[data-st]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.st === S.st))
     document.querySelectorAll('[data-slow]').forEach((b) => b.setAttribute('aria-pressed', +b.dataset.slow === S.slow))
     $('#segMedium').innerHTML = MEDIA[S.st].map((x) =>
       `<button class="sl-btn" data-mid="${x.id}" aria-pressed="${x.id === S.mid}">${x.name}</button>`).join('')
+    $('#rhoSrc').hidden = S.st === 'vacuum'
     $('#rhoSrc').innerHTML = `${m.name}的密度可以查：<a href="https://zh.wikipedia.org/zh-tw/${encodeURIComponent(m.wiki)}" target="_blank" rel="noopener">維基百科「${m.name}」</a>`
     $('#btnMain').textContent = S.mode === 'pulse' ? '發出聲響' : S.emitting ? '停止聲音' : '播放聲音'
     $('#btnPause').textContent = S.paused ? '繼續畫面' : '暫停畫面'
@@ -660,7 +728,20 @@
       return { st, mid, name: m.name, T, v: m.v(T), rho: m.rho(T) }
     },
     sample: () => window.soundSim.sampleOf(S.st, S.mid, S.T),
-    relayout: layout
+    relayout: layout,
+    // 學習單每一步的場景：split 是 STEP 1 的左右兩種介質（不放反射板），lockT 是固定溫度
+    setScene: ({ split = false, lockT = null } = {}) => {
+      if (split && !S.split) { S.reflSaved = S.refl; S.refl = false }
+      if (!split && S.split) {
+        S.refl = S.reflSaved
+        if (S.st === 'vacuum') { S.st = 'gas'; S.mid = 'air' }
+      }
+      const changed = S.split !== split || S.lockT !== lockT
+      S.split = split; S.lockT = lockT
+      if (changed) { S.echo = null; resetWave(); makeParticles() }
+      syncControls()
+    },
+    interfaceRT
   }
 })()
 </script>
@@ -677,14 +758,18 @@
   const STATE_NAME = { gas: '氣體', liquid: '液體', solid: '固體' }
 
   // 預設題目：依 issue #2 的學習單建議；check 是動手任務的判定（看紀錄表），ask 是動手後要寫的理由
+  // scene 是這一步的模擬場景：split＝左右兩種介質（右半邊固定空氣），lockT＝固定溫度
   const defaultSteps = [
-    { id: 's1', kind: 'task', title: 'STEP 1 預測', check: 'media', need: 3, showLog: true,
-      prompt: '換不同的介質（例如氦氣、空氣、二氧化碳、水、鐵），每換一種就按「記錄數據」，比較密度和聲速。記錄 3 種以上的介質後，預測：在沒有任何物質的真空中，聲音傳得比在空氣中快還是慢？',
-      blanks: [{ text: '真空中的聲速比空氣中', options: ['快', '慢'], answer: '慢' }],
-      ask: '為什麼？寫下你的理由。', ref: '慢。真空中沒有粒子可以把振動一個接一個傳下去，聲音無法傳播。',
-      board: '真空中的聲速比空氣 {快|慢*}\n原因：' },
-    { id: 's2', kind: 'task', title: 'STEP 2 歸納', check: 'states', need: 3, showLog: true,
-      prompt: '在氣體、液體、固體中各選一種介質，按「記錄數據」，比較三種狀態的聲速。',
+    { id: 's1', kind: 'task', title: 'STEP 1 預測', check: 'media', need: 3, showLog: true, scene: { split: true, lockT: 20 },
+      prompt: '介質區分成左右兩半，右半邊固定是空氣。把左半邊換成不同的介質（氣體、液體、固體、真空），播放聲音，觀察右半邊的空氣粒子有沒有跟著振動；每換一種就按「記錄數據」。記錄 3 種以上、而且包含真空。',
+      blanks: [
+        { text: '左半邊是真空時，右半邊的空氣粒子', options: ['有振動', '沒有振動'], answer: '沒有振動' },
+        { text: '聲音', options: ['能', '不能'], answer: '不能' }
+      ],
+      ask: '在真空中傳播。為什麼？寫下你的理由。', ref: '真空中沒有粒子可以把振動一個接一個傳下去，所以聲音不能在真空中傳播。',
+      board: '真空時，右邊粒子 {有|沒有*} 振動\n聲音 {能|不能*} 在真空中傳播\n原因：' },
+    { id: 's2', kind: 'task', title: 'STEP 2 歸納', check: 'states', need: 3, showLog: true, scene: { lockT: 20 },
+      prompt: '溫度固定在 20°C。在氣體、液體、固體中各選一種介質，按「記錄數據」，比較三種狀態的聲速。',
       blanks: [
         { text: '聲速最快的是', options: ['固體', '液體', '氣體'], answer: '固體' },
         { text: '聲速第二快的是', options: ['固體', '液體', '氣體'], answer: '液體' },
@@ -707,14 +792,15 @@
   ]
 
   // 動手任務的判定：數紀錄表裡不同的介質、狀態或溫度
+  // must：一定要記到的項目（STEP 1 要包含真空）
   const CHECKS = {
-    media: { unit: '種介質', count: (log) => new Set(log.map((r) => r.mid)).size },
+    media: { unit: '種介質', count: (log) => new Set(log.map((r) => r.mid)).size, must: (log) => log.some((r) => r.mid === 'vac'), mustText: '要包含真空' },
     states: { unit: '種狀態', count: (log) => new Set(log.map((r) => r.st)).size },
     airTemps: { unit: '個空氣溫度', count: (log) => new Set(log.filter((r) => r.mid === 'air').map((r) => r.T)).size }
   }
   // 參考答案版學習單的示範紀錄（數值由模擬算出）
   const EXAMPLES = {
-    media: [['gas', 'he', 20], ['gas', 'air', 20], ['gas', 'co2', 20]],
+    media: [['gas', 'air', 20], ['liquid', 'water', 20], ['vacuum', 'vac', 20]],
     states: [['gas', 'air', 20], ['liquid', 'water', 20], ['solid', 'iron', 20]],
     airTemps: [0, 10, 20, 30, 40].map((T) => ['gas', 'air', T])
   }
@@ -735,8 +821,8 @@
         { text: '教師用一張圖複習橫波的特徵（粒子振動方向、波峰、波谷、波長、振幅）', min: 5, note: '教師須準備橫波特徵圖' }
       ] },
       { name: '發展活動', min: 20, items: [
-        { text: '教師以「投影上課」模式播放連續聲，請學生上台換不同介質並按「記錄數據」，比較密度與聲速，再預測真空中的聲速（學習單 STEP 1）', min: 6, note: '' },
-        { text: '請學生在氣體、液體、固體各選一種介質記錄，歸納三態的聲速大小（學習單 STEP 2）', min: 5, note: '' },
+        { text: '教師以「投影上課」模式播放連續聲，請學生上台把左半邊換成氣體、液體、固體、真空並按「記錄數據」，觀察右半邊的空氣有沒有振動，歸納聲音不能在真空中傳播（學習單 STEP 1）', min: 6, note: '模擬固定在 20°C，右半邊固定是空氣' },
+        { text: '請學生在 20°C 下於氣體、液體、固體各選一種介質記錄，歸納三態的聲速大小（學習單 STEP 2）', min: 5, note: '模擬固定在 20°C' },
         { text: '介質選空氣，請學生把溫度調到 0～40°C 並記錄，從紀錄表歸納 v ≈ 331 + 0.6T（學習單 STEP 3）', min: 6, note: '' },
         { text: '學生用「我學到了……」寫下一項學到的內容（學習單 STEP 4）', min: 3, note: '' }
       ] },
@@ -763,35 +849,56 @@
     // 舊存檔缺的欄位用預設題補上
     steps: (store.get(K('steps'), null) || clone(defaultSteps)).map((st) => ({ ...clone(defaultSteps.find((d) => d.id === st.id) || {}), ...st })),
     plan: store.get(K('plan'), null) || clone(defaultPlan),
-    qIndex: 0, editorOpen: false, showAnswer: false,
+    qIndex: 0, sIndex: 0, editorOpen: false, showAnswer: false,
     answers: store.get(KC('answers'), {}),
     confirmed: store.get(KC('confirmed'), {}),
     student: store.get(KC('student'), ''),
-    log: store.get(KC('log'), []),
+    // 紀錄表只屬於目前這一步，換步驟就清空；動手任務完成過就記在 tasksDone，不會因為清空而消失
+    log: [], logMsg: '',
+    tasksDone: store.get(KC('tasksDone'), {}),
     submitted: false, submitError: '', saveMsg: ''
   }
 
   // ---------- 紀錄表 ----------
-  const fmtV = (v) => `${Math.round(v)}`
+  const fmtV = (v) => v === 0 ? '—' : `${Math.round(v)}`
   const fmtRho = (r) => r < 10 ? r.toFixed(2) : `${Math.round(r)}`
-  const logRowsHtml = (rows) => rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}（${STATE_NAME[r.st]}）</td><td>${r.T}</td><td>${fmtRho(r.rho)}</td><td>${fmtV(r.v)}</td></tr>`).join('')
-  const LOG_HEAD = '<tr><th>#</th><th>介質</th><th>溫度 °C</th><th>密度 kg/m³</th><th>聲速 m/s</th></tr>'
-  const logTableHtml = () => !ui.log.length
-    ? '<p class="note">還沒有紀錄。按控制板的「記錄數據」新增一筆。</p>'
-    : `<div class="table-wrap"><table class="log-table"><thead>${LOG_HEAD}</thead><tbody>${logRowsHtml(ui.log)}</tbody></table></div>`
-  const updateLogCount = () => { $('logCount').textContent = ui.log.length ? `已記錄 ${ui.log.length} 筆` : '' }
-  $('btnLog').addEventListener('click', () => {
+  const logRowsHtml = (rows) => rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}${r.st === 'vacuum' ? '' : `（${STATE_NAME[r.st]}）`}</td><td>${r.T}</td><td>${fmtRho(r.rho)}</td><td>${fmtV(r.v)}</td></tr>`).join('')
+  const logHead = (s) => `<tr><th>#</th><th>${s && s.scene && s.scene.split ? '左半邊介質' : '介質'}</th><th>溫度 °C</th><th>密度 kg/m³</th><th>聲速 m/s</th></tr>`
+  const logTableHtml = (s) => !ui.log.length
+    ? '<p class="note">還沒有紀錄。調好模擬後按「記錄數據」新增一筆。</p>'
+    : `<div class="table-wrap"><table class="log-table"><thead>${logHead(s)}</thead><tbody>${logRowsHtml(ui.log)}</tbody></table></div>`
+  // 記錄按鈕放在每一步裡（投影與學生作答）
+  const logControlsHtml = () => `<div class="row">
+      <button class="sl-btn" type="button" data-act="log">記錄數據</button>
+      <button class="sl-btn" type="button" data-act="clear-log" ${ui.log.length ? '' : 'disabled'}>清除紀錄</button>
+      <span class="note">${esc(ui.logMsg)}</span>
+    </div>`
+  const recordData = () => {
     const s = sim.sample()
     const last = ui.log[ui.log.length - 1]
-    if (last && last.mid === s.mid && last.T === s.T) { $('logCount').textContent = '這一筆已經記過了'; return }
+    if (last && last.mid === s.mid && last.T === s.T) { ui.logMsg = '這一筆已經記過了'; return }
     ui.log.push({ st: s.st, mid: s.mid, name: s.name, T: s.T, v: s.v, rho: s.rho })
-    store.set(KC('log'), ui.log)
-    updateLogCount()
-    if (ui.mode !== 'prep') renderSide()
-  })
+    ui.logMsg = ''
+    // 達成條件時記下來
+    ui.steps.forEach((st) => { if (st.kind === 'task' && currentStep() === st && progressDone(st)) ui.tasksDone[st.id] = true })
+    store.set(KC('tasksDone'), ui.tasksDone)
+  }
 
-  const progress = (s) => { const c = CHECKS[s.check]; return { n: c ? c.count(ui.log) : 0, need: s.need || 1, unit: c ? c.unit : '' } }
-  const taskDone = (s) => { const p = progress(s); return p.n >= p.need }
+  const progress = (s) => {
+    const c = CHECKS[s.check]
+    return { n: c ? c.count(ui.log) : 0, need: s.need || 1, unit: c ? c.unit : '', must: c && c.must ? c.must(ui.log) : true, mustText: c && c.mustText ? c.mustText : '' }
+  }
+  const progressDone = (s) => { const p = progress(s); return p.n >= p.need && p.must }
+  const taskDone = (s) => !!ui.tasksDone[s.id] || (currentStep() === s && progressDone(s))
+  const currentStep = () => ui.mode === 'project' ? ui.steps[ui.qIndex] : ui.mode === 'student' ? ui.steps[ui.sIndex] : null
+  // 換到另一步：清空紀錄表，模擬換成這一步的場景
+  const applyScene = () => { const s = currentStep(); sim.setScene((s && s.scene) || {}) }
+  const goStep = (key, i) => {
+    const next = Math.max(0, Math.min(ui.steps.length - 1, i))
+    if (next === ui[key]) return
+    ui[key] = next; ui.log = []; ui.logMsg = ''; ui.showAnswer = false
+    applyScene()
+  }
 
   // ---------- 備課：教案 ----------
   const itemsMin = (ph) => ph.items.reduce((s, it) => s + (Number(it.min) || 0), 0)
@@ -842,7 +949,7 @@
       const rows = withAnswer
         ? (EXAMPLES[s.check] || []).map(([st, mid, T]) => sim.sampleOf(st, mid, T))
         : Array.from({ length: Math.max(s.need || 1, s.check === 'airTemps' ? 5 : 0) }, () => null)
-      return `<table style="border-collapse: collapse; margin: 4px 0;"><tr><th ${cell}>介質</th><th ${cell}>溫度 °C</th><th ${cell}>密度 kg/m³</th><th ${cell}>聲速 m/s</th></tr>
+      return `<table style="border-collapse: collapse; margin: 4px 0;"><tr><th ${cell}>${s.scene && s.scene.split ? '左半邊介質' : '介質'}</th><th ${cell}>溫度 °C</th><th ${cell}>密度 kg/m³</th><th ${cell}>聲速 m/s</th></tr>
         ${rows.map((r) => r ? `<tr><td ${cell}>${esc(r.name)}</td><td ${cell}>${r.T}</td><td ${cell}>${fmtRho(r.rho)}</td><td ${cell}>${fmtV(r.v)}</td></tr>`
           : `<tr><td ${cell}>　　　</td><td ${cell}></td><td ${cell}></td><td ${cell}></td></tr>`).join('')}</table>`
     }
@@ -970,9 +1077,9 @@
     const s = ui.steps[ui.qIndex]
     const hasAnswer = /\*\s*[|}]/.test(s.board || '')
     const log = s.showLog ? `
-      <div class="board-log">
-        ${logTableHtml()}
-        <div class="row" style="margin-top: var(--space-2);"><button class="sl-btn" type="button" data-act="clear-log" ${ui.log.length ? '' : 'disabled'}>清除紀錄</button></div>
+      <div class="board-log" style="display: grid; gap: var(--space-2);">
+        ${logControlsHtml()}
+        ${logTableHtml(s)}
       </div>` : ''
     $('side').innerHTML = `
       <div class="board-nav">
@@ -1018,14 +1125,15 @@
     if (ui.submitted) return renderSummary()
     const done = ui.steps.filter(isAnswered).length
     const pct = Math.round(done / ui.steps.length * 100)
-    const steps = ui.steps.map((s) => {
+    // 一次只顯示一步
+    const steps = [ui.steps[ui.sIndex]].map((s) => {
       const parts = []
       if (s.kind === 'task') {
         const p = progress(s)
-        parts.push(p.n >= p.need
-          ? `<span><span class="sl-badge sl-badge-success">已完成：記錄了 ${p.n} ${p.unit}</span></span>`
-          : `<span><span class="sl-badge">進行中：已記錄 ${p.n} / ${p.need} ${p.unit}</span></span>`)
-        if (s.showLog) parts.push(logTableHtml())
+        parts.push(taskDone(s)
+          ? '<span><span class="sl-badge sl-badge-success">動手任務完成</span></span>'
+          : `<span><span class="sl-badge">進行中：已記錄 ${p.n} / ${p.need} ${p.unit}${p.mustText ? `，${p.mustText}` : ''}</span></span>`)
+        if (s.showLog) parts.push(logControlsHtml(), logTableHtml(s))
       }
       ;(s.blanks || []).forEach((b, bi) => parts.push(`<div>${esc(b.text)}
         <select data-ans="${s.id}-${bi}" aria-label="${esc(b.text)}">
@@ -1049,6 +1157,14 @@
         <div class="sl-progress-head"><span>完成進度</span><span class="sl-progress-num">${done} / ${ui.steps.length}</span></div>
         <div class="sl-progress-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="完成進度"><div class="sl-progress-fill" style="width: ${pct}%;"></div></div>
       </div>
+      <div class="board-nav">
+        <span class="sl-badge">${ui.sIndex + 1} / ${ui.steps.length}${isAnswered(ui.steps[ui.sIndex]) ? '　已完成' : ''}</span>
+        <div class="row">
+          <button class="sl-btn" type="button" data-act="s-prev" ${ui.sIndex === 0 ? 'disabled' : ''}>上一步</button>
+          <button class="sl-btn" type="button" data-act="s-next" ${ui.sIndex === ui.steps.length - 1 ? 'disabled' : ''}>下一步</button>
+        </div>
+      </div>
+      <p class="note">換到另一步時，紀錄表會清空；已完成的動手任務會保留。</p>
       ${steps}
       ${ui.submitError ? `<div class="msg-error">${esc(ui.submitError)}</div>` : ''}
       <button class="sl-btn sl-btn-primary" type="button" data-act="submit">交出學習單</button>
@@ -1058,14 +1174,13 @@
   const summaryText = () => {
     const lines = [`聲音的形成與應用學習單｜${CLASSES[cls] ? `${cls} ${CLASSES[cls]}` : ''}｜${ui.student}`]
     ui.steps.forEach((s) => {
-      if (s.kind === 'task') lines.push(`${s.title}：記錄了 ${progress(s).n} ${progress(s).unit}`)
+      if (s.kind === 'task') lines.push(`${s.title}：動手任務${taskDone(s) ? '完成' : '未完成'}`)
       ;(s.blanks || []).forEach((b, bi) => {
         const a = ui.answers[`${s.id}-${bi}`] || '（未作答）'
         lines.push(`${s.title}：${b.text} ${a}（${a === b.answer ? '正確' : '再想想'}）`)
       })
       if (hasText(s)) lines.push(`${s.title}：${textOf(s) || '（未作答）'}`)
     })
-    if (ui.log.length) lines.push(`紀錄表：${ui.log.map((r) => `${r.name} ${r.T}°C ${fmtV(r.v)} m/s`).join('；')}`)
     return lines.join('\n')
   }
 
@@ -1075,7 +1190,7 @@
     $('side').innerHTML = `
       <h2 class="sl-text-title">作答摘要</h2>
       <div class="msg-ok">已交出：${esc(ui.student)}</div>
-      <p>選擇填空答對 <strong>${right} / ${cloze.length}</strong>，紀錄表共 <strong>${ui.log.length}</strong> 筆。</p>
+      <p>選擇填空答對 <strong>${right} / ${cloze.length}</strong>，動手任務完成 <strong>${ui.steps.filter((s) => s.kind === 'task' && taskDone(s)).length} / ${ui.steps.filter((s) => s.kind === 'task').length}</strong>。</p>
       ${cloze.map((x) => `<div class="ws-step"><strong>${esc(x.s.title)}</strong><div>${esc(x.b.text)} <strong>${esc(x.a || '（未作答）')}</strong>
         <span class="sl-badge ${x.a === x.b.answer ? 'sl-badge-success' : 'sl-badge-danger'}">${x.a === x.b.answer ? '正確' : '再想想'}</span></div></div>`).join('')}
       <label class="note" for="summaryBox">複製下面文字，貼到 Classroom 或傳給老師</label>
@@ -1150,6 +1265,9 @@
     const q = new URLSearchParams({ mode })
     if (mode !== 'prep') q.set('class', cls)
     try { history.replaceState(null, '', `?${q}`) } catch (e) { /* 網址改不了也不影響 */ }
+    // 換模式也算換到另一步：紀錄表清空，模擬換成目前這一步的場景（備課時不限制）
+    ui.log = []; ui.logMsg = ''
+    applyScene()
     renderSide()
     sim.relayout()
   }
@@ -1168,10 +1286,13 @@
       renderSide()
     }
     if (act === 'reset-steps') { ui.steps = clone(defaultSteps); store.set(K('steps'), ui.steps); ui.saveMsg = '<div class="msg-ok">已還原預設題</div>'; renderSide() }
-    if (act === 'q-prev') { ui.qIndex = Math.max(0, ui.qIndex - 1); ui.showAnswer = false; renderSide() }
-    if (act === 'q-next') { ui.qIndex = Math.min(ui.steps.length - 1, ui.qIndex + 1); ui.showAnswer = false; renderSide() }
+    if (act === 'q-prev') { goStep('qIndex', ui.qIndex - 1); renderSide() }
+    if (act === 'q-next') { goStep('qIndex', ui.qIndex + 1); renderSide() }
+    if (act === 's-prev') { goStep('sIndex', ui.sIndex - 1); renderSide() }
+    if (act === 's-next') { goStep('sIndex', ui.sIndex + 1); renderSide() }
     if (act === 'q-answer') { ui.showAnswer = !ui.showAnswer; renderSide() }
-    if (act === 'clear-log') { ui.log = []; store.set(KC('log'), ui.log); updateLogCount(); renderSide() }
+    if (act === 'log') { recordData(); renderSide() }
+    if (act === 'clear-log') { ui.log = []; ui.logMsg = ''; renderSide() }
     if (act === 'submit') {
       if (!ui.student.trim()) { ui.submitError = '請先填寫座號與姓名，再交出學習單。'; renderSide(); $('studentName').focus(); return }
       ui.submitError = ''; ui.submitted = true; renderSide()
@@ -1212,10 +1333,9 @@
   })
   $('side').addEventListener('toggle', (e) => { if (e.target.id === 'stepEditor') ui.editorOpen = e.target.open }, true)
 
-  updateLogCount()
   setMode(ui.mode)
   // 給測試用
-  window.soundUnit = { ui, defaultSteps, defaultPlan, planTotal, isAnswered, setMode, cls }
+  window.soundUnit = { ui, defaultSteps, defaultPlan, planTotal, isAnswered, taskDone, setMode, cls }
 })()
 </script>
 </body>
