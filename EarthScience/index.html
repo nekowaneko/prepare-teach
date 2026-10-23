@@ -343,7 +343,7 @@ const codeRow = (code) => {
     : r.ext.length ? `<span class="sl-badge sl-badge-amber">僅延伸 ${r.ext.length} 個</span>` : '<span class="sl-badge sl-badge-danger">沒有模擬</span>'
   const action = n
     ? `<button class="sl-btn" type="button" data-toggle="${code}" aria-expanded="${isOpen}">${isOpen ? '收合模擬' : '查看模擬'}</button>`
-    : '<span class="sl-text-caption" style="color: var(--ink-muted);">日後可開發</span>'
+    : `<span class="sl-text-caption" style="color: var(--ink-muted);">${hasMine(code) ? '已有我的單元' : '日後可開發'}</span>`
   const grid = isOpen
     ? `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-2); margin-top: var(--space-3);">${r.main.map(s => simMini(s, 'main')).join('')}${r.ext.map(s => simMini(s, 'ext')).join('')}</div>`
     : ''
@@ -366,7 +366,10 @@ const codeRow = (code) => {
 const renderByCode = () => {
   const pass = (c) => state.cover === 'all' || (state.cover === 'mine' ? hasMine(c) : state.cover === 'missing' ? !isCovered(c) : isCovered(c))
   const themes = themesOfStage(state.stage).filter(t => state.theme === 'all' || t === state.theme)
-  return themes.map(t => {
+  // 只看我的單元時，沒有單元的主題整個不顯示，避免一長串空白卡片
+  const shown = state.cover === 'mine' ? themes.filter(t => codesOfStage(state.stage).some(c => themeOf(c) === t && hasMine(c))) : themes
+  if (!shown.length) return '<div class="sl-card"><div class="sl-text-body" style="color: var(--ink-muted);">這個學習階段還沒有自己的單元。</div></div>'
+  return shown.map(t => {
     const codes = codesOfStage(state.stage).filter(c => themeOf(c) === t && pass(c))
     const body = codes.length
       ? `<div style="display: grid; gap: var(--space-2);">${codes.map(codeRow).join('')}</div>`
