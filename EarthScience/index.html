@@ -256,7 +256,7 @@ const textbookOf = (code) => textbook.filter(h => h.codes.includes(code))
 
 
 // 畫面狀態：view 為 code（依條目）或 sim（依模擬）
-const state = { stage:'J', view:'hanlin', theme:'all', cover:'all', open:{} }
+const state = { stage:'J', view:'hanlin', theme:'all', cover:'all', ready:'all', open:{} }
 
 // 條目 → 對應模擬（分主要與延伸）
 const simsFor = (code) => ({
@@ -317,6 +317,25 @@ const prHtml = (h) => {
   return `<div class="pr"><span class="pr-score">${s}<small> / ${PR.maxScore}</small></span><span class="pr-chips">${chips}</span></div>${why}`
 }
 
+// 準備狀態：「我準備好了」＝有自己的模擬、其餘用板書補足就夠用；其他都是「還沒準備好」
+// 國中以康軒章為單位，高中（沒有章）以條目為單位。預設：有做好的單元涵蓋到就算準備好了；老師可以點標籤改
+const rdEdits = (() => { try { return JSON.parse(localStorage.getItem('ready.edits')) || {} } catch (e) { return {} } })()
+const saveReady = () => { try { localStorage.setItem('ready.edits', JSON.stringify(rdEdits)) } catch (e) { /* 存不了就只在這次有效 */ } }
+const readyUnits = () => (window.UNITS || []).filter(u => u.status === 'ready')
+const chapterReady = (h) => ('ch:' + h.id) in rdEdits ? !!rdEdits['ch:' + h.id] : readyUnits().some(u => u.codes.some(c => h.codes.includes(c)))
+const codeReady = (c) => {
+  if (('code:' + c) in rdEdits) return !!rdEdits['code:' + c]
+  const chs = textbook.filter(h => h.codes.includes(c))
+  return chs.length ? chs.some(chapterReady) : readyUnits().some(u => u.codes.includes(c))
+}
+const readyPass = (ok) => state.ready === 'all' || (state.ready === 'ready' ? ok : !ok)
+// 模擬卡片：用到的條目有任一條準備好了就算在「我準備好了」，有任一條還沒就算在「還沒準備好」
+const simReadyPass = (s) => {
+  const codes = [...s.main, ...s.ext].filter(c => codeText[c])
+  return state.ready === 'all' || (state.ready === 'ready' ? codes.some(codeReady) : codes.some(c => !codeReady(c)))
+}
+const readyTag = (key, ok) => `<button type="button" class="pr-chip${ok ? ' on' : ''}" data-rd="${key}" aria-pressed="${ok}" title="點一下切換">${ok ? '✓ 我準備好了' : '— 還沒準備好'} ✎</button>`
+
 const simLinkAttrs = (s) => s.mine ? `data-unit="${s.mine}"` : 'target="_blank" rel="noopener"'
 
 const renderSummary = () => {
@@ -343,7 +362,8 @@ const renderSummary = () => {
         <div class="sl-card-value">${codes.length - any}<span class="sl-text-caption" style="color: var(--on-slate);"> 條</span></div>
       </div>
     </div>
-    <p class="sl-text-body" style="margin: var(--space-2) 0 0;">${codes.filter(hasMine).length ? `我的單元涵蓋 ${codes.filter(hasMine).length} 條學習內容` : '這個學習階段還沒有自己的單元'}</p>`
+    <p class="sl-text-body" style="margin: var(--space-2) 0 0;">我準備好了：${state.stage === 'J' ? `${textbook.filter(chapterReady).length} / ${textbook.length} 章、` : ''}${codes.filter(codeReady).length} / ${codes.length} 條學習內容</p>
+    <p class="sl-text-body" style="margin: var(--space-1) 0 0;">${codes.filter(hasMine).length ? `我的單元涵蓋 ${codes.filter(hasMine).length} 條學習內容` : '這個學習階段還沒有自己的單元'}</p>`
 }
 
 // 篩選列：選取中的按鈕用石板色
@@ -354,7 +374,8 @@ const renderFilters = () => {
   const stageBtns = stages.map(s => btn(`${s.name}`, state.stage === s.id, `data-stage="${s.id}"`)).join('')
   const viewBtns = btn('依條目', state.view === 'code', 'data-view="code"') + btn('依模擬', state.view === 'sim', 'data-view="sim"') + btn('依康軒章節', state.view === 'hanlin', 'data-view="hanlin"')
   // 依模擬時每張卡片已列出三個階段，所以不顯示階段篩選
-  let html = row('檢視', viewBtns) + (state.view !== 'sim' && stages.length > 1 ? row('階段', stageBtns) : '')
+  const readyBtns = btn('全部', state.ready === 'all', 'data-ready="all"') + btn('我準備好了', state.ready === 'ready', 'data-ready="ready"') + btn('還沒準備好', state.ready === 'todo', 'data-ready="todo"')
+  let html = row('檢視', viewBtns) + row('準備', readyBtns) + (state.view !== 'sim' && stages.length > 1 ? row('階段', stageBtns) : '')
   if (state.view === 'code') {
     const themeBtns = [btn('全部主題', state.theme === 'all', 'data-theme-f="all"')]
       .concat(themesOfStage(state.stage).map(t => {
@@ -399,7 +420,7 @@ const codeRow = (code) => {
     <div class="sl-card">
       <div style="display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; justify-content: space-between;">
         <div style="display: grid; gap: var(--space-1); flex: 1 1 260px; min-width: 0;">
-          <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center;"><span class="sl-text-label">${code}</span>${badge}</div>
+          <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center;"><span class="sl-text-label">${code}</span>${badge}${readyTag('code:' + code, codeReady(code))}</div>
           <div class="sl-text-body">${codeText[code]}</div>
           ${hanlinLine(code)}
           ${mineLine(code)}
@@ -412,11 +433,11 @@ const codeRow = (code) => {
 
 // 依條目：按主題分組
 const renderByCode = () => {
-  const pass = (c) => state.cover === 'all' || (state.cover === 'mine' ? hasMine(c) : state.cover === 'missing' ? !isCovered(c) : isCovered(c))
+  const pass = (c) => readyPass(codeReady(c)) && (state.cover === 'all' || (state.cover === 'mine' ? hasMine(c) : state.cover === 'missing' ? !isCovered(c) : isCovered(c)))
   const themes = themesOfStage(state.stage).filter(t => state.theme === 'all' || t === state.theme)
   // 只看我的單元時，沒有單元的主題整個不顯示，避免一長串空白卡片
-  const shown = state.cover === 'mine' ? themes.filter(t => codesOfStage(state.stage).some(c => themeOf(c) === t && hasMine(c))) : themes
-  if (!shown.length) return '<div class="sl-card"><div class="sl-text-body" style="color: var(--ink-muted);">這個學習階段還沒有自己的單元。</div></div>'
+  const shown = state.cover === 'mine' || state.ready !== 'all' ? themes.filter(t => codesOfStage(state.stage).some(c => themeOf(c) === t && pass(c))) : themes
+  if (!shown.length) return `<div class="sl-card"><div class="sl-text-body" style="color: var(--ink-muted);">${state.ready === 'ready' ? '這個學習階段還沒有準備好的條目。' : state.ready === 'todo' ? '這個學習階段的條目都準備好了。' : '這個學習階段還沒有自己的單元。'}</div></div>`
   return shown.map(t => {
     const codes = codesOfStage(state.stage).filter(c => themeOf(c) === t && pass(c))
     const body = codes.length
@@ -450,12 +471,13 @@ const simCard = (s) => {
 }
 
 const renderBySim = () => {
-  const cats = [...new Set(sims.map(s => s.cat))]
+  const list = sims.filter(simReadyPass)
+  const cats = [...new Set(list.map(s => s.cat))]
   const legend = '<div class="sl-row" style="padding: 0; gap: var(--space-2);"><span class="sl-badge sl-badge-success">主要對應</span><span class="sl-badge sl-badge-amber">延伸可用</span><span class="sl-text-caption" style="color: var(--ink-muted);">滑鼠移到代號上可看條目全文</span></div>'
   return legend + cats.map(cat => `
     <section style="display: grid; gap: var(--space-3);">
       <div class="sl-text-title">${cat}</div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--space-3);">${sims.filter(s => s.cat === cat).map(simCard).join('')}</div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--space-3);">${list.filter(s => s.cat === cat).map(simCard).join('')}</div>
     </section>`).join('')
 }
 
@@ -481,7 +503,7 @@ const hanlinCard = (h) => {
     <div class="sl-card${top ? ' pr-top' : ''}">
       <div style="display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; justify-content: space-between;">
         <div style="display: grid; gap: var(--space-1); flex: 1 1 260px; min-width: 0;">
-          <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center;"><span class="sl-text-label">${h.ch}</span><span class="sl-badge">${h.subj}</span>${status}${top ? '<span class="sl-badge sl-badge-amber">優先</span>' : ''}${done ? '<span class="sl-badge sl-badge-success">已有我的單元</span>' : ''}</div>
+          <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center;"><span class="sl-text-label">${h.ch}</span><span class="sl-badge">${h.subj}</span>${status}${top ? '<span class="sl-badge sl-badge-amber">優先</span>' : ''}${done ? '<span class="sl-badge sl-badge-success">已有我的單元</span>' : ''}${readyTag('ch:' + h.id, chapterReady(h))}</div>
           ${prHtml(h)}
           <div class="sl-text-caption" style="color: var(--ink-muted);">${h.secs}</div>
           <div style="display: grid; gap: var(--space-1);">${tags}</div>
@@ -496,7 +518,7 @@ const hanlinCard = (h) => {
 // 課程計畫沒有填到的國中條目，單獨列出，不自行歸章
 const unlistedSection = () => {
   const used = new Set(textbook.flatMap(h => h.codes))
-  const codes = codesOfStage('J').filter(c => !used.has(c))
+  const codes = codesOfStage('J').filter(c => !used.has(c) && readyPass(codeReady(c)))
   if (!codes.length) return ''
   return `
     <section style="display: grid; gap: var(--space-3);">
@@ -507,12 +529,13 @@ const unlistedSection = () => {
 }
 
 const renderByHanlin = () => {
-  const books = [...new Set(textbook.map(h => h.book))]
+  const chs = textbook.filter(h => readyPass(chapterReady(h)))
+  const books = [...new Set(chs.map(h => h.book))]
   const legend = '<div class="sl-row" style="padding: 0; gap: var(--space-2);"><span class="sl-badge sl-badge-success">有模擬</span><span class="sl-badge sl-badge-danger">沒有模擬</span><span class="sl-text-caption" style="color: var(--ink-muted);">只列地科章節；理化章節請看「線上模擬與課綱對照」</span></div>' + '<div class="sl-row" style="padding: 0; gap: var(--space-2);"><span class="sl-text-caption" style="color: var(--ink-muted);">同一學期內依備課優先分數由高到低排列（滿分 ' + PR.maxScore + '，10 分以上標「優先」；同分照課本順序）。標 ✎ 的三項是判斷，點一下可以改。</span><button class="sl-btn" type="button" data-pr-reset>還原判斷</button></div>'
   return legend + books.map(b => `
     <section style="display: grid; gap: var(--space-3);">
       <div class="sl-text-title">${b}</div>
-      <div style="display: grid; gap: var(--space-2);">${textbook.filter(h => h.book === b).sort((x, y) => prScore(y) - prScore(x) || textbook.indexOf(x) - textbook.indexOf(y)).map(hanlinCard).join('')}</div>
+      <div style="display: grid; gap: var(--space-2);">${chs.filter(h => h.book === b).sort((x, y) => prScore(y) - prScore(x) || textbook.indexOf(x) - textbook.indexOf(y)).map(hanlinCard).join('')}</div>
     </section>`).join('') + unlistedSection()
 }
 
@@ -550,6 +573,12 @@ document.getElementById('app').addEventListener('click', (e) => {
     const h = textbook.find(x => x.id === d.prCh)
     prEdits[d.prCh] = { ...(prEdits[d.prCh] || {}), [d.prKey]: prFlag(h, d.prKey) ? 0 : 1 }
     saveEdits()
+  }
+  else if (d.ready) { state.ready = d.ready }
+  else if (d.rd) {
+    const now = d.rd.startsWith('ch:') ? chapterReady(textbook.find(x => 'ch:' + x.id === d.rd)) : codeReady(d.rd.slice(5))
+    rdEdits[d.rd] = now ? 0 : 1
+    saveReady()
   }
   else if (d.prReset !== undefined) { for (const k in prEdits) delete prEdits[k]; saveEdits() }
   else return
