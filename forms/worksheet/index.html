@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>學習單建議</title>
+<link rel="stylesheet" href="../../design/tokens.css">
+<link rel="stylesheet" href="../../design/components.css">
+<style>
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  main { max-width: 860px; margin: 0 auto; padding: var(--space-4); display: grid; gap: var(--space-4); }
+  h1, h2, p { margin: 0; }
+  .sl-card { display: grid; gap: var(--space-3); padding: var(--space-4); }
+  .note { color: var(--ink-muted); }
+  .field { display: grid; gap: var(--space-1); }
+  input[type="text"], input[type="number"], select, textarea {
+    font: inherit; color: var(--ink); background: var(--surface-card);
+    border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); width: 100%; min-width: 0;
+  }
+  textarea { min-height: 72px; resize: vertical; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .obj { display: grid; grid-template-columns: 3em auto minmax(9em, 12em) minmax(0, 1fr); gap: var(--space-2); align-items: center; }
+  .obj .lead { white-space: nowrap; }
+  .phase { display: grid; grid-template-columns: 6em 6em minmax(0, 1fr); gap: var(--space-2); align-items: start; }
+  .phase .min { display: flex; gap: var(--space-1); align-items: center; }
+  .step { border: 1px dashed var(--line); border-radius: var(--radius-lg); padding: var(--space-3); display: grid; gap: var(--space-3); }
+  .step-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .actions { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+  .err { color: var(--danger); }
+  .ok { color: var(--success); }
+  @media (max-width: 640px) {
+    .obj { grid-template-columns: 3em minmax(0, 1fr); }
+    .obj .lead { grid-column: 1; }
+    .obj select, .obj input { grid-column: 2; }
+    .phase { grid-template-columns: 6em minmax(0, 1fr); }
+    .phase textarea { grid-column: 1 / -1; }
+    .two { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header class="actions">
+    <h1 class="sl-text-title">學習單建議</h1>
+    <span class="sl-badge sl-badge-amber">送出後在 GitHub 開 issue</span>
+  </header>
+  <p class="note sl-text-body">填好後按最下面的「送到 GitHub」，會打開已經填好內容的 GitHub 新 issue 頁面，再按綠色的 Create 就完成。填到一半關掉也沒關係，內容會留在這台電腦。</p>
+
+  <section class="sl-card" aria-labelledby="hUnit">
+    <h2 class="sl-text-label" id="hUnit">單元</h2>
+    <div class="field">
+      <label class="sl-text-label" for="unitNo">單元 issue 編號</label>
+      <input type="number" id="unitNo" min="1" step="1" placeholder="例如：1" style="max-width: 10em;">
+    </div>
+    <div class="field">
+      <label class="sl-text-label" for="unitName">單元名稱（可空，會放進 issue 標題）</label>
+      <input type="text" id="unitName" placeholder="例如：聲音的形成與應用">
+    </div>
+  </section>
+
+  <section class="sl-card" aria-labelledby="hGoal">
+    <h2 class="sl-text-label" id="hGoal">學習目標</h2>
+    <p class="note sl-text-caption">選一個可以觀察、可以測量的動詞，再補上內容。動詞依布魯姆（認知、情意）與辛普森（技能）的分類，由淺到深排列。</p>
+    <div id="goals"></div>
+    <p class="note sl-text-body" id="goalPreview"></p>
+  </section>
+
+  <section class="sl-card" aria-labelledby="hFlow">
+    <h2 class="sl-text-label" id="hFlow">課堂安排</h2>
+    <p class="note sl-text-caption">只填分鐘數和要做的事，寫重點就好。</p>
+    <div id="phases" style="display: grid; gap: var(--space-3);"></div>
+    <p class="note sl-text-body" id="phaseTotal"></p>
+  </section>
+
+  <section class="sl-card" aria-labelledby="hSteps">
+    <h2 class="sl-text-label" id="hSteps">學習單步驟</h2>
+    <p class="note sl-text-caption">題型：自由作答＝學生寫一段話；選擇填空＝句子裡挖空讓學生選；動手任務＝學生在模擬上操作，由模擬自動判定是否完成。</p>
+    <div id="steps" style="display: grid; gap: var(--space-3);"></div>
+    <div class="actions"><button class="sl-btn" type="button" id="addStep">新增一步</button></div>
+  </section>
+
+  <section class="sl-card" aria-labelledby="hNotes">
+    <h2 class="sl-text-label" id="hNotes">其他要求（可空）</h2>
+    <textarea id="notes" aria-labelledby="hNotes" placeholder="例如：最後一題要連到超音波的應用；用語要配合康軒課本。"></textarea>
+  </section>
+
+  <section class="sl-card" aria-label="送出">
+    <div class="actions">
+      <button class="sl-btn sl-btn-primary" type="button" id="send">送到 GitHub</button>
+      <button class="sl-btn" type="button" id="copy">複製內容</button>
+      <button class="sl-btn" type="button" id="clear">清空重填</button>
+    </div>
+    <p class="sl-text-body" id="msg" role="status"></p>
+    <textarea id="out" readonly hidden style="min-height: 200px;" aria-label="issue 內容"></textarea>
+  </section>
+</main>
+
+<script>
+(() => {
+  const REPO = 'nekowaneko/prepare-teach'
+  const LABEL = '類型:學習單建議'
+  const KEY = 'form.worksheet'
+  const MAX_URL = 7500 // 太長的網址 GitHub 會拒絕，改請老師貼上
+
+  // 行為動詞：依使用者提供的教育目標分類表（布魯姆 2001 修訂版、情意五層次、辛普森技能七層次）
+  const VERBS = {
+    cognitive: { name: '認知', levels: [
+      ['記憶', '背誦、敘述、記憶、列舉、指出、識別、重現、命名、定義'],
+      ['了解', '解釋、說明、摘要、推論、舉例、轉化、比較、歸納、估計'],
+      ['應用', '執行、運用、使用、實行、計算、示範、操作、解決、修改'],
+      ['分析', '區分、組織、歸因、分析、檢驗、比較、解構、關聯、對照'],
+      ['評鑑', '檢查、批判、評估、判斷、推薦、辯護、反思、衡量'],
+      ['創造', '生成、規劃、設計、建構、組合、發明、編撰、擬定']
+    ] },
+    affective: { name: '情意', levels: [
+      ['接受', '覺知、注意、傾聽、察覺、容忍、選擇'],
+      ['反應', '配合、遵守、回答、參與、協助、遵從、表現'],
+      ['評價', '接納、追求、尊崇、珍惜、讚賞、主動參與、倡導'],
+      ['組織', '整合、歸納、建構、權衡、組織、形成體系'],
+      ['內化', '實踐、恪守、展現、維持、抗拒、展現價值觀']
+    ] },
+    skill: { name: '技能', levels: [
+      ['知覺', '觀察、感應、辨識、注意、聆聽、感受'],
+      ['心態準備', '準備、定位、起立、就位、顯示意願'],
+      ['引導反應', '模仿、嘗試、跟隨、練習、重現'],
+      ['機械化', '操作、熟練、打字、書寫、組合、繪製'],
+      ['複雜反應', '精熟地執行、流暢地操作、有效率地完成'],
+      ['適應', '調整、修改、變更、因應、轉化動作'],
+      ['創新', '原創、設計新動作、自創招式、發明']
+    ] }
+  }
+  const PHASES = ['準備活動', '發展活動', '綜合活動']
+  const PURPOSES = ['觀察', '預測', '動手操作', '觀察細節', '歸納', '應用或延伸', '心得']
+  const KINDS = ['自由作答', '選擇填空', '動手任務']
+
+  const $ = (s) => document.querySelector(s)
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+  const blankStep = () => ({ purpose: '', kind: '', task: '', answer: '', board: '' })
+  const blank = () => ({
+    unitNo: '', unitName: '',
+    goals: { cognitive: { verb: '', text: '' }, affective: { verb: '', text: '' }, skill: { verb: '', text: '' } },
+    phases: PHASES.map(() => ({ min: '', text: '' })),
+    steps: [blankStep()], notes: ''
+  })
+  const load = () => { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.steps ? v : blank() } catch (e) { return blank() } }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(F)) } catch (e) { /* 存不了就只在這次有效 */ } }
+  let F = load()
+
+  // ---------- 畫面 ----------
+  const verbSelect = (key) => {
+    const g = F.goals[key]
+    return `<select data-goal="${key}" data-f="verb" aria-label="${VERBS[key].name}的動詞">
+      <option value="">選動詞</option>
+      ${VERBS[key].levels.map(([lv, list]) => `<optgroup label="${lv}">${list.split('、').map((v) =>
+        `<option ${g.verb === v ? 'selected' : ''}>${v}</option>`).join('')}</optgroup>`).join('')}
+    </select>`
+  }
+  const goalSentence = (key) => {
+    const g = F.goals[key]
+    return g.verb && g.text.trim() ? `學生能${g.verb}${g.text.trim().replace(/[。.]+$/, '')}。` : ''
+  }
+  function renderGoals () {
+    $('#goals').innerHTML = Object.keys(VERBS).map((key) => `
+      <div class="obj" style="margin-bottom: var(--space-2);">
+        <span class="sl-text-label">${VERBS[key].name}</span>
+        <span class="lead sl-text-body">學生能</span>
+        ${verbSelect(key)}
+        <input type="text" data-goal="${key}" data-f="text" value="${esc(F.goals[key].text)}" aria-label="${VERBS[key].name}的內容" placeholder="${{ cognitive: '例如：聲波傳遞需要介質', affective: '例如：和同儕分享觀察到的現象', skill: '例如：模擬的變因，比較不同因素對聲速的影響' }[key]}">
+      </div>`).join('')
+    renderGoalPreview()
+  }
+  function renderGoalPreview () {
+    const lines = Object.keys(VERBS).map((k) => goalSentence(k) && `${VERBS[k].name}：${goalSentence(k)}`).filter(Boolean)
+    $('#goalPreview').innerHTML = lines.length ? lines.map(esc).join('<br>') : ''
+  }
+  function renderPhases () {
+    $('#phases').innerHTML = PHASES.map((name, i) => `
+      <div class="phase">
+        <span class="sl-text-label">${name}</span>
+        <span class="min"><input type="number" min="0" step="1" data-phase="${i}" data-f="min" value="${esc(F.phases[i].min)}" aria-label="${name}分鐘數"><span class="sl-text-body">分</span></span>
+        <textarea data-phase="${i}" data-f="text" aria-label="${name}內容" placeholder="${['例如：用一張圖複習橫波的特徵', '例如：引導學生觀察與歸納，完成學習單', '例如：寫例題，讓學生練習'][i]}">${esc(F.phases[i].text)}</textarea>
+      </div>`).join('')
+    renderTotal()
+  }
+  function renderTotal () {
+    const t = F.phases.reduce((s, p) => s + (parseInt(p.min, 10) || 0), 0)
+    $('#phaseTotal').textContent = `三個階段合計 ${t} 分鐘`
+  }
+  const opts = (list, cur, ph) => `<option value="">${ph}</option>` + list.map((o) => `<option ${o === cur ? 'selected' : ''}>${o}</option>`).join('')
+  function renderSteps () {
+    const n = F.steps.length
+    $('#steps').innerHTML = F.steps.map((s, i) => `
+      <div class="step">
+        <div class="step-head">
+          <strong class="sl-text-label">STEP ${i + 1}</strong>
+          <div class="actions">
+            <button class="sl-btn" type="button" data-act="up" data-i="${i}" ${i === 0 ? 'disabled' : ''}>往上移</button>
+            <button class="sl-btn" type="button" data-act="down" data-i="${i}" ${i === n - 1 ? 'disabled' : ''}>往下移</button>
+            <button class="sl-btn" type="button" data-act="del" data-i="${i}" ${n === 1 ? 'disabled' : ''}>刪除這步</button>
+          </div>
+        </div>
+        <div class="two">
+          <div class="field"><label class="sl-text-label" for="sp${i}">目的</label><select id="sp${i}" data-step="${i}" data-f="purpose">${opts(PURPOSES, s.purpose, '請選擇')}</select></div>
+          <div class="field"><label class="sl-text-label" for="sk${i}">題型</label><select id="sk${i}" data-step="${i}" data-f="kind">${opts(KINDS, s.kind, '請選擇')}</select></div>
+        </div>
+        <div class="field"><label class="sl-text-label" for="st${i}">學生要做或看到的事</label><textarea id="st${i}" data-step="${i}" data-f="task">${esc(s.task)}</textarea></div>
+        <div class="field"><label class="sl-text-label" for="sa${i}">期望的答案或完成條件</label>
+          <textarea id="sa${i}" data-step="${i}" data-f="answer" placeholder="選擇填空請寫出正確選項；動手任務請寫成功的條件">${esc(s.answer)}</textarea></div>
+        <div class="field"><label class="sl-text-label" for="sb${i}">板書想法（可空）</label>
+          <input type="text" id="sb${i}" data-step="${i}" data-f="board" value="${esc(s.board)}" placeholder="投影時白板上要出現的一行字"></div>
+      </div>`).join('')
+  }
+  function renderAll () {
+    $('#unitNo').value = F.unitNo; $('#unitName').value = F.unitName; $('#notes').value = F.notes
+    renderGoals(); renderPhases(); renderSteps()
+  }
+
+  // ---------- 輸入 ----------
+  document.addEventListener('input', (e) => {
+    const el = e.target, d = el.dataset
+    if (el.id === 'unitNo') F.unitNo = el.value
+    else if (el.id === 'unitName') F.unitName = el.value
+    else if (el.id === 'notes') F.notes = el.value
+    else if (d.goal) { F.goals[d.goal][d.f] = el.value; renderGoalPreview() }
+    else if (d.phase) { F.phases[+d.phase][d.f] = el.value; renderTotal() }
+    else if (d.step) F.steps[+d.step][d.f] = el.value
+    else return
+    save()
+  })
+  $('#steps').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]')
+    if (!b) return
+    const i = +b.dataset.i, s = F.steps
+    if (b.dataset.act === 'del') s.splice(i, 1)
+    if (b.dataset.act === 'up' && i > 0) [s[i - 1], s[i]] = [s[i], s[i - 1]]
+    if (b.dataset.act === 'down' && i < s.length - 1) [s[i + 1], s[i]] = [s[i], s[i + 1]]
+    save(); renderSteps()
+  })
+  $('#addStep').addEventListener('click', () => {
+    F.steps.push(blankStep()); save(); renderSteps()
+    $(`#sp${F.steps.length - 1}`).focus()
+  })
+  $('#clear').addEventListener('click', () => {
+    if (!confirm('確定要清空所有內容嗎？')) return
+    F = blank(); save(); renderAll(); say('')
+  })
+
+  // ---------- 送出 ----------
+  const say = (t, cls = '') => { $('#msg').textContent = t; $('#msg').className = `sl-text-body ${cls}` }
+  function problems () {
+    const p = []
+    if (!(parseInt(F.unitNo, 10) > 0)) p.push('單元 issue 編號')
+    Object.keys(VERBS).forEach((k) => { if (!goalSentence(k)) p.push(`${VERBS[k].name}目標的動詞和內容`) })
+    F.steps.forEach((s, i) => { if (!s.purpose || !s.kind || !s.task.trim()) p.push(`STEP ${i + 1} 的目的、題型和要做的事`) })
+    return p
+  }
+  const block = (label, text) => `**${label}**\n\n${text.trim() || '_沒有填_'}\n`
+  function body () {
+    const out = [`### 單元 issue 編號\n\n#${parseInt(F.unitNo, 10)}\n`, '### 學習目標\n']
+    Object.keys(VERBS).forEach((k) => out.push(`- ${VERBS[k].name}：${goalSentence(k)}（動詞：${F.goals[k].verb}）`))
+    out.push('\n### 課堂安排\n')
+    PHASES.forEach((name, i) => out.push(`- ${name}（${parseInt(F.phases[i].min, 10) || 0} 分鐘）：${F.phases[i].text.trim().replace(/\n+/g, ' ') || '_沒有填_'}`))
+    F.steps.forEach((s, i) => {
+      out.push(`\n### STEP ${i + 1}\n`, `- 目的：${s.purpose}`, `- 題型：${s.kind}\n`,
+        block('學生要做或看到的事', s.task), block('期望的答案或完成條件', s.answer), block('板書想法', s.board))
+    })
+    out.push('\n### 其他要求\n', F.notes.trim() || '_沒有填_', '\n\n<!-- 由學習單建議網頁表單產生 -->')
+    return out.join('\n')
+  }
+  const title = () => `[學習單建議] ${F.unitName.trim()}`.trim()
+  function ready () {
+    const p = problems()
+    if (p.length) { say(`還沒填：${p.join('、')}`, 'err'); return false }
+    return true
+  }
+  $('#send').addEventListener('click', () => {
+    if (!ready()) return
+    const url = `https://github.com/${REPO}/issues/new?` + new URLSearchParams({ title: title(), labels: LABEL, body: body() }).toString()
+    if (url.length > MAX_URL) {
+      showOut()
+      say('內容太長，沒辦法直接帶到 GitHub。請按「複製內容」，在打開的頁面把內容貼到說明欄。', 'err')
+      window.open(`https://github.com/${REPO}/issues/new?` + new URLSearchParams({ title: title(), labels: LABEL }).toString(), '_blank', 'noopener')
+      return
+    }
+    window.open(url, '_blank', 'noopener')
+    say('已打開 GitHub 的新 issue 頁面，確認內容後按綠色的 Create。', 'ok')
+  })
+  function showOut () { const o = $('#out'); o.value = body(); o.hidden = false; return o }
+  $('#copy').addEventListener('click', () => {
+    if (!ready()) return
+    const o = showOut()
+    const fallback = () => { o.select(); say('無法自動複製，已選取上方文字，請按 Ctrl＋C', 'err') }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(o.value).then(() => say('已複製', 'ok')).catch(fallback)
+    else fallback()
+  })
+
+  renderAll()
+  // 給測試用
+  window.worksheetForm = { body, title, problems, state: () => F }
+})()
+</script>
+</body>
+</html>

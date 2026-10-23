@@ -1,1 +1,5 @@
 blank_issues_enabled: true
+contact_links:
+  - name: 學習單建議
+    url: https://nekowaneko.github.io/prepare-teach/forms/worksheet/
+    about: 模擬審過之後，用這個網頁表單告訴我學習單要怎麼設計。步驟可以自己增減，填完會帶你回 GitHub 開 issue。
