@@ -31,6 +31,15 @@ window.UNITS = [
     href: 'units/sound.html'
   },
   {
+    id: 'matter',
+    group: '國中理化',
+    title: '認識物質',
+    meta: '國中二年級．Ab-IV-1、Ab-IV-3、Ab-IV-4、Ca-IV-1',
+    codes: ['Ab-IV-1', 'Ab-IV-3', 'Ab-IV-4', 'Ca-IV-1'],
+    status: 'ready',
+    href: 'units/matter.html'
+  },
+  {
     id: 'es-index',
     group: '國中地科',
     title: '國中地科教學模擬索引',
