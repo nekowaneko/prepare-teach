@@ -117,6 +117,17 @@ body { margin: 0; font-family: var(--font-sans); background: var(--surface-page)
 .sl-progress-num { color: var(--ink); font-weight: 500; }
 .sl-progress-track { height: 4px; border-radius: var(--radius-bar); background: var(--progress-track); overflow: hidden; }
 .sl-progress-fill { height: 100%; border-radius: var(--radius-bar); background: var(--progress-fill); }
+.pr { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; }
+.pr-score { font-size: 26px; font-weight: 700; line-height: 1; white-space: nowrap; }
+.pr-score small { font-size: 13px; font-weight: 500; color: var(--ink-muted); }
+.pr-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pr-chip { font: inherit; font-size: 12px; line-height: 18px; padding: 3px 9px; border-radius: var(--radius-pill); border: 1px dashed var(--line); background: transparent; color: var(--ink-muted); }
+.pr-chip.on { border: 1px solid var(--amber); background: var(--amber-soft); color: var(--amber-text); font-weight: 600; }
+button.pr-chip { cursor: pointer; }
+button.pr-chip:hover { border-color: var(--amber); }
+.pr-top { border: 1px solid var(--amber); box-shadow: inset 4px 0 0 var(--amber); }
+.pr-why { font-size: 12px; color: var(--ink-muted); }
+.pr-why.edited::after { content: '（已改過）'; color: var(--amber-text); }
 </style>
 <div id="app" style="max-width: 1120px; margin: 0 auto; padding-inline: var(--space-4); padding-block: var(--space-6) var(--space-8); display: grid; gap: var(--space-4);">
   <header style="display: grid; gap: var(--space-1);">
@@ -136,6 +147,7 @@ body { margin: 0; font-family: var(--font-sans); background: var(--surface-page)
 </div>
 
 <script src="../data/units.js"></script>
+<script src="../data/priority.js"></script>
 <script src="../site.js"></script>
 <script>
 // 只有一個學習階段：國中地科（第四學習階段）
@@ -277,6 +289,34 @@ const mineList = (us) => {
   sims.unshift({ id: 'mine-' + u.id, t: escHtml(u.title), cat: '我的單元', url: escHtml(Site.unitUrl(u, p.mode, p.cls, UNIT_PREFIX)), q: escHtml(u.meta), main: u.codes.slice(), ext: [], mine: u.id })
 })
 // 我的單元連結在同一分頁開啟（寫入「繼續上次」）；外部模擬另開分頁
+// 備課優先分數（沿用備課優先順序評分表）：「有現成模擬」「課綱覆蓋過半」只算外部模擬的主要對應，
+// 我的單元不加分，已經做好的章另外標「已有我的單元」
+const PR = window.PRIORITY
+const prEdits = (() => { try { return JSON.parse(localStorage.getItem('score.edits')) || {} } catch (e) { return {} } })()
+const saveEdits = () => { try { localStorage.setItem('score.edits', JSON.stringify(prEdits)) } catch (e) { /* 存不了就只在這次有效 */ } }
+const extCovered = (h) => h.codes.filter(c => sims.some(s => !s.mine && s.main.includes(c)))
+const prFlag = (h, key) => {
+  if (key === 'sim') return extCovered(h).length > 0
+  if (key === 'cov') { const n = extCovered(h).length; return n > 0 && n * 2 >= h.codes.length }
+  const e = prEdits[h.id]
+  if (e && key in e) return !!e[key]
+  return !!(PR.judge[h.id] || {})[key]
+}
+const prScore = (h) => PR.criteria.reduce((a, c) => a + (prFlag(h, c.key) ? c.pts : 0), 0)
+const prEdited = (h) => !!prEdits[h.id] && Object.keys(prEdits[h.id]).some(k => !!prEdits[h.id][k] !== !!(PR.judge[h.id] || {})[k])
+const prHtml = (h) => {
+  const s = prScore(h)
+  const chips = PR.criteria.map(c => {
+    const on = prFlag(h, c.key)
+    const text = `${on ? '✓' : '—'} ${c.label}${on ? ` ＋${c.pts}` : ''}`
+    return c.auto
+      ? `<span class="pr-chip${on ? ' on' : ''}" title="${c.tag}">${text}</span>`
+      : `<button type="button" class="pr-chip${on ? ' on' : ''}" data-pr-ch="${h.id}" data-pr-key="${c.key}" aria-pressed="${on}" title="點一下切換">${text} ✎</button>`
+  }).join('')
+  const why = PR.judge[h.id] ? `<div class="pr-why${prEdited(h) ? ' edited' : ''}">判斷依據：${PR.judge[h.id].why}</div>` : ''
+  return `<div class="pr"><span class="pr-score">${s}<small> / ${PR.maxScore}</small></span><span class="pr-chips">${chips}</span></div>${why}`
+}
+
 const simLinkAttrs = (s) => s.mine ? `data-unit="${s.mine}"` : 'target="_blank" rel="noopener"'
 
 const renderSummary = () => {
@@ -435,11 +475,14 @@ const hanlinCard = (h) => {
   const grid = isOpen
     ? `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-2); margin-top: var(--space-3);">${usable.map(s => simMini(s, kindOf(s))).join('')}</div>`
     : ''
+  const top = prScore(h) >= 10
+  const done = (window.UNITS || []).some(u => u.status === 'ready' && u.codes.some(c => h.codes.includes(c)))
   return `
-    <div class="sl-card">
+    <div class="sl-card${top ? ' pr-top' : ''}">
       <div style="display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; justify-content: space-between;">
         <div style="display: grid; gap: var(--space-1); flex: 1 1 260px; min-width: 0;">
-          <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center;"><span class="sl-text-label">${h.ch}</span><span class="sl-badge">${h.subj}</span>${status}</div>
+          <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center;"><span class="sl-text-label">${h.ch}</span><span class="sl-badge">${h.subj}</span>${status}${top ? '<span class="sl-badge sl-badge-amber">優先</span>' : ''}${done ? '<span class="sl-badge sl-badge-success">已有我的單元</span>' : ''}</div>
+          ${prHtml(h)}
           <div class="sl-text-caption" style="color: var(--ink-muted);">${h.secs}</div>
           <div style="display: grid; gap: var(--space-1);">${tags}</div>
           ${mineHere}
@@ -465,11 +508,11 @@ const unlistedSection = () => {
 
 const renderByHanlin = () => {
   const books = [...new Set(textbook.map(h => h.book))]
-  const legend = '<div class="sl-row" style="padding: 0; gap: var(--space-2);"><span class="sl-badge sl-badge-success">有模擬</span><span class="sl-badge sl-badge-danger">沒有模擬</span><span class="sl-text-caption" style="color: var(--ink-muted);">只列地科章節；理化章節請看「線上模擬與課綱對照」</span></div>'
+  const legend = '<div class="sl-row" style="padding: 0; gap: var(--space-2);"><span class="sl-badge sl-badge-success">有模擬</span><span class="sl-badge sl-badge-danger">沒有模擬</span><span class="sl-text-caption" style="color: var(--ink-muted);">只列地科章節；理化章節請看「線上模擬與課綱對照」</span></div>' + '<div class="sl-row" style="padding: 0; gap: var(--space-2);"><span class="sl-text-caption" style="color: var(--ink-muted);">同一學期內依備課優先分數由高到低排列（滿分 ' + PR.maxScore + '，10 分以上標「優先」；同分照課本順序）。標 ✎ 的三項是判斷，點一下可以改。</span><button class="sl-btn" type="button" data-pr-reset>還原判斷</button></div>'
   return legend + books.map(b => `
     <section style="display: grid; gap: var(--space-3);">
       <div class="sl-text-title">${b}</div>
-      <div style="display: grid; gap: var(--space-2);">${textbook.filter(h => h.book === b).map(hanlinCard).join('')}</div>
+      <div style="display: grid; gap: var(--space-2);">${textbook.filter(h => h.book === b).sort((x, y) => prScore(y) - prScore(x) || textbook.indexOf(x) - textbook.indexOf(y)).map(hanlinCard).join('')}</div>
     </section>`).join('') + unlistedSection()
 }
 
@@ -503,6 +546,12 @@ document.getElementById('app').addEventListener('click', (e) => {
   else if (d.themeF) { state.theme = d.themeF }
   else if (d.cover) { state.cover = d.cover }
   else if (d.toggle) { state.open[d.toggle] = !state.open[d.toggle] }
+  else if (d.prCh) {
+    const h = textbook.find(x => x.id === d.prCh)
+    prEdits[d.prCh] = { ...(prEdits[d.prCh] || {}), [d.prKey]: prFlag(h, d.prKey) ? 0 : 1 }
+    saveEdits()
+  }
+  else if (d.prReset !== undefined) { for (const k in prEdits) delete prEdits[k]; saveEdits() }
   else return
   render()
 })
