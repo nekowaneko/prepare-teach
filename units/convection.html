@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Convection</title>
+<link rel="stylesheet" href="../design/tokens.css">
+<link rel="stylesheet" href="../design/components.css">
+<style>
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .top { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; padding: var(--space-4) var(--space-4) 0; max-width: 1500px; margin: 0 auto; }
+  .top h1 { margin: 0; }
+  .top .pages { margin-left: auto; }
+  .seg { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .seg .sl-btn[aria-pressed="true"] { background: var(--amber-soft); border-color: var(--amber); color: var(--amber-text); }
+
+  .page { display: grid; gap: var(--space-4); padding: var(--space-4); max-width: 1500px; margin: 0 auto; }
+  /* 左：圖或動畫｜右：學習單內容 */
+  .duo { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: var(--space-4); align-items: start; }
+  .duo.wide-right { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .stage { display: grid; gap: var(--space-3); min-width: 0; }
+  .canvas-wrap { background: var(--surface-card); border-radius: var(--radius-lg); overflow: hidden; }
+  canvas { display: block; width: 100%; }
+  #cv, #cvC { height: clamp(460px, 64vh, 720px); }
+  .cvB { height: clamp(220px, 28vh, 300px); }
+  .readouts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .readouts.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .readouts .sl-card-value { font-size: clamp(18px, 2.2vw, 28px); }
+
+  .sheet { background: var(--surface-card); border-radius: var(--radius-lg); padding: var(--space-4); display: grid; gap: var(--space-3); align-content: start; min-width: 0; }
+  .sheet h2, .sheet h3, .sheet p { margin: 0; }
+  .bank { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .bank .sl-badge { font-size: 14px; line-height: 22px; } /* 老師要求：比預設大 2px */
+
+  /* 第 1 頁：熱氣球三個步驟，圖在左、英文在右 */
+  .bsteps { display: grid; gap: var(--space-3); }
+  .bstep { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: var(--space-4); align-items: center; }
+  .bstep .canvas-wrap { background: var(--surface-page); }
+  .btext { display: flex; gap: var(--space-3); align-items: baseline; font-size: clamp(20px, 2vw, 26px); line-height: 1.6; }
+  .btext h3 { margin: 0; font-size: inherit; }
+  .btext p { margin: 0; }
+
+  /* 第 2 頁：句型 */
+  .sents { display: grid; gap: var(--space-2); }
+  .sent { display: grid; gap: var(--space-2); background: var(--surface-page); border: 2px solid transparent; border-radius: var(--radius-lg); padding: var(--space-3); }
+  .sent[aria-current="true"] { border-color: var(--amber); }
+  .sent-go { font: inherit; color: var(--ink); text-align: left; cursor: pointer; display: grid; gap: var(--space-1); background: none; border: 0; padding: 0; font-size: 20px; line-height: 1.9; }
+  .sent-go:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .sent-go .sl-text-caption { color: var(--ink-muted); line-height: 1.4; }
+  .sent-ans { justify-self: start; }
+  .blank { display: inline-block; min-width: 5.5em; border-bottom: 2px solid var(--ink); text-align: center; margin: 0 0.15em; line-height: 1.3; }
+  .blank .ans { visibility: hidden; color: var(--success); font-weight: 700; }
+  .sent.show-ans .blank .ans { visibility: visible; }
+
+  /* 動畫控制板（在動畫下方） */
+  .ctrl-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-3); }
+  .ctrl-row .sl-card { display: grid; gap: var(--space-3); padding: var(--space-4); align-content: start; }
+  .ctrl-row h2 { margin: 0; }
+  .check { display: flex; gap: var(--space-2); align-items: center; }
+  .check input { width: 18px; height: 18px; accent-color: var(--amber); margin: 0; }
+  .note { margin: 0; color: var(--ink-muted); }
+
+  /* 第 3 頁：循環模板 */
+  .tpl { display: grid; gap: var(--space-3); font-size: clamp(19px, 1.9vw, 24px); line-height: 1.9; }
+  .tpl-lines { display: grid; gap: var(--space-2); }
+  .tpl-line { display: flex; gap: var(--space-2); align-items: baseline; }
+  .num { flex: none; display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: var(--radius-pill); background: var(--surface-slate); color: var(--on-slate); font-size: 0.75em; font-weight: 700; line-height: 1; }
+  .key { background: var(--amber-soft); color: var(--amber-text); border-radius: var(--radius-md); padding: 0 0.2em; font-weight: 700; }
+  .hide-keys .key { color: transparent; background: transparent; border-radius: 0; border-bottom: 2px solid var(--ink); }
+  .pager { display: flex; justify-content: space-between; gap: var(--space-2); }
+
+  @media (max-width: 1100px) {
+    .duo, .duo.wide-right { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 900px) {
+    .top .pages { margin-left: 0; }
+  }
+  @media (max-width: 560px) {
+    #cv, #cvC { height: 520px; }
+    .bstep { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
+    .cvB { height: 220px; }
+    .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .readouts.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .sent-go { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="sl-btn" href="../index.html" data-t="back">回導覽</a>
+  <h1 class="sl-text-title" data-t="title">熱對流</h1>
+  <div class="seg pages" role="group" aria-label="頁面" id="segPage">
+    <button class="sl-btn" type="button" data-page="1" aria-pressed="true" data-t="p1">1 熱氣球</button>
+    <button class="sl-btn" type="button" data-page="2" aria-pressed="false" data-t="p2">2 動畫與句型</button>
+    <button class="sl-btn" type="button" data-page="3" aria-pressed="false" data-t="p3">3 循環模板</button>
+  </div>
+  <!-- 老師要求隱藏語言切換，固定英文；中文介面文字保留在程式裡 -->
+  <div class="seg" role="group" aria-label="語言" id="segLang" hidden>
+    <button class="sl-btn" type="button" data-lang="zh" aria-pressed="false">中文</button>
+    <button class="sl-btn" type="button" data-lang="en" aria-pressed="true">English</button>
+  </div>
+</header>
+
+<!-- 第 1 頁：熱氣球引起動機（老師念），三個步驟 -->
+<main class="page" id="page1" data-page="1">
+  <section class="sheet" aria-label="Hot air balloon">
+    <h2 class="sl-text-title">Warm-up: How does a hot air balloon fly?</h2>
+    <div class="bsteps">
+      <div class="bstep">
+        <div class="canvas-wrap"><canvas class="cvB" data-step="0" aria-label="燃燒器加熱氣球裡的空氣"></canvas></div>
+        <div class="btext"><span class="num">1</span><div><h3>Heat the balloon.</h3><p>The burner heats the air inside the balloon.</p></div></div>
+      </div>
+      <div class="bstep">
+        <div class="canvas-wrap"><canvas class="cvB" data-step="1" aria-label="氣球裡的空氣變熱膨脹，氣球變大"></canvas></div>
+        <div class="btext"><span class="num">2</span><div><h3>The balloon expands.</h3><p>The hot air expands, so the balloon gets bigger.</p></div></div>
+      </div>
+      <div class="bstep">
+        <div class="canvas-wrap"><canvas class="cvB" data-step="2" aria-label="熱空氣比外面的冷空氣輕，氣球起飛"></canvas></div>
+        <div class="btext"><span class="num">3</span><div><h3>The balloon takes off.</h3><p>The hot air is lighter than the cool air outside, so the balloon goes up.</p></div></div>
+      </div>
+    </div>
+  </section>
+  <div class="pager"><span></span><button class="sl-btn" type="button" data-go="2" data-t="next">下一頁</button></div>
+</main>
+
+<!-- 第 2 頁：動畫（左）＋句型（右），動畫控制板在下方 -->
+<main class="page" id="page2" data-page="2" hidden>
+  <div class="duo">
+    <section class="stage" aria-label="熱對流動畫">
+      <div class="canvas-wrap"><canvas id="cv" aria-label="一團水在加熱的水箱裡循環，畫出環境等溫線、水團的溫度與大小"></canvas></div>
+      <div class="sl-bento readouts">
+        <div class="sl-card sl-card-slate"><div class="sl-card-label" data-t="rHeight">高度</div><div class="sl-card-value" id="rvH">—</div></div>
+        <div class="sl-card"><div class="sl-card-label" data-t="rParcel">水團溫度</div><div class="sl-card-value" id="rvT">—</div></div>
+        <div class="sl-card"><div class="sl-card-label" data-t="rAmb">周圍水溫</div><div class="sl-card-value" id="rvA">—</div></div>
+        <div class="sl-card"><div class="sl-card-label" data-t="rDiff">和周圍比</div><div class="sl-card-value" id="rvD">—</div></div>
+      </div>
+    </section>
+    <section class="sheet" aria-label="Sentence patterns">
+      <h2 class="sl-text-title">How does the water move?</h2>
+      <h3 class="sl-text-label">Word bank</h3>
+      <div class="bank">
+        <span class="sl-badge">warmer</span><span class="sl-badge">cooler</span><span class="sl-badge">bigger</span>
+        <span class="sl-badge">smaller</span><span class="sl-badge">rises</span><span class="sl-badge">sinks</span>
+      </div>
+      <div class="sents" id="sents"></div>
+      <p class="note sl-text-caption" data-t="sentNote">按句子會讓動畫停在那一步。</p>
+    </section>
+  </div>
+
+  <div class="ctrl-row" aria-label="動畫控制板">
+    <div class="sl-card">
+      <h2 class="sl-text-label" data-t="play">播放</h2>
+      <div class="seg">
+        <button class="sl-btn sl-btn-primary" type="button" id="btnPlay" data-t="pause">暫停</button>
+        <button class="sl-btn" type="button" id="btnReset" data-t="reset">從頭開始</button>
+      </div>
+      <div class="seg" role="group" aria-label="速度" id="segSpeed">
+        <button class="sl-btn" type="button" data-speed="0.5" aria-pressed="false" data-t="slow">慢</button>
+        <button class="sl-btn" type="button" data-speed="1" aria-pressed="true" data-t="mid">中</button>
+        <button class="sl-btn" type="button" data-speed="2" aria-pressed="false" data-t="fast">快</button>
+      </div>
+    </div>
+    <div class="sl-card">
+      <h2 class="sl-text-label" data-t="jump">停在</h2>
+      <div class="seg" id="segJump">
+        <button class="sl-btn" type="button" data-jump="bottom" data-t="jBottom">底部</button>
+        <button class="sl-btn" type="button" data-jump="up" data-t="jUp">上升中</button>
+        <button class="sl-btn" type="button" data-jump="top" data-t="jTop">頂部</button>
+        <button class="sl-btn" type="button" data-jump="down" data-t="jDown">下沉中</button>
+      </div>
+      <p class="note sl-text-caption" data-t="jumpNote">按下會暫停在那個位置，方便提問。</p>
+    </div>
+    <div class="sl-card">
+      <h2 class="sl-text-label" data-t="show">顯示</h2>
+      <label class="check"><input type="checkbox" id="chkIso" checked><span data-t="cIso">環境等溫線</span></label>
+      <label class="check"><input type="checkbox" id="chkPath" checked><span data-t="cPath">循環路徑</span></label>
+      <label class="check"><input type="checkbox" id="chkTrail" checked><span data-t="cTrail">水團足跡（溫度與大小）</span></label>
+      <label class="check"><input type="checkbox" id="chkCmp"><span data-t="cCmp">和周圍同量的水比大小</span></label>
+      <label class="check"><input type="checkbox" id="chkWords"><span data-t="cWords">過程文字</span></label>
+      <p class="note sl-text-caption" data-t="scaleNote">水受熱膨脹其實很小，圓的大小變化已放大顯示。</p>
+    </div>
+  </div>
+  <div class="pager"><button class="sl-btn" type="button" data-go="1" data-t="prev">上一頁</button><button class="sl-btn" type="button" data-go="3" data-t="next">下一頁</button></div>
+</main>
+
+<!-- 第 3 頁：Cyclical 模板，全班看圖照句型再念一次 -->
+<main class="page" id="page3" data-page="3" hidden>
+  <div class="duo wide-right">
+    <section class="stage" aria-label="熱對流循環圖">
+      <div class="canvas-wrap"><canvas id="cvC" aria-label="熱對流循環圖，標出四個步驟"></canvas></div>
+    </section>
+    <section class="sheet" aria-label="Cyclical text">
+      <h2 class="sl-text-title">Let's read it together</h2>
+      <div class="tpl" id="tpl"></div>
+      <div class="seg"><button class="sl-btn" type="button" id="btnKeys" data-t="hideKeys">遮住關鍵字</button></div>
+    </section>
+  </div>
+  <div class="pager"><button class="sl-btn" type="button" data-go="2" data-t="prev">上一頁</button><span></span></div>
+</main>
+
+<script src="../site.js"></script>
+<script>
+(() => {
+  // ---------- 介面文字（學習單內容固定用英文） ----------
+  const T = {
+    zh: {
+      back: '回導覽', title: '熱對流', draft: '草稿', p1: '1 熱氣球', p2: '2 動畫與句型', p3: '3 循環模板', prev: '上一頁', next: '下一頁',
+      bIn: '氣球裡的空氣', bOut: '外面的空氣', bH: '高度', burnerOn: '打開燃燒器', burnerOff: '關掉燃燒器',
+      rHeight: '高度', rParcel: '水團溫度', rAmb: '周圍水溫', rDiff: '和周圍比',
+      showAns: '顯示答案', hideAns: '隱藏答案', sentNote: '按句子會讓動畫停在那一步。', hideKeys: '遮住關鍵字', showKeys: '顯示關鍵字',
+      play: '播放', pause: '暫停', resume: '播放', reset: '從頭開始', slow: '慢', mid: '中', fast: '快',
+      jump: '停在', jBottom: '底部', jUp: '上升中', jTop: '頂部', jDown: '下沉中', jumpNote: '按下會暫停在那個位置，方便提問。',
+      show: '顯示', cIso: '環境等溫線', cPath: '循環路徑', cTrail: '水團足跡（溫度與大小）', cCmp: '和周圍同量的水比大小', cWords: '過程文字',
+      scaleNote: '水受熱膨脹其實很小，圓的大小變化已放大顯示。',
+      heater: '熱源', parcel: '一團水', same: '周圍同量的水', iso: '環境等溫線', height: '高度 (cm)', heightM: '高度 (m)',
+      wHeat: '受熱、膨脹', wRise: '上升', wCool: '水面散熱、收縮', wSink: '下沉', outside: '外面的空氣', burner: '燃燒器',
+      warmer: (d) => `熱 ${d} °C`, cooler: (d) => `冷 ${d} °C`, equal: '一樣'
+    },
+    en: {
+      back: 'Home', title: 'Convection', draft: 'Draft', p1: '1 Hot air balloon', p2: '2 Animation and sentences', p3: '3 Cycle template', prev: 'Back', next: 'Next',
+      bIn: 'Air inside', bOut: 'Air outside', bH: 'Height', burnerOn: 'Turn on burner', burnerOff: 'Turn off burner',
+      rHeight: 'Height', rParcel: 'Water blob', rAmb: 'Water around', rDiff: 'Compared',
+      showAns: 'Show answer', hideAns: 'Hide answer', sentNote: 'Tap a sentence to stop the animation at that step.', hideKeys: 'Hide key words', showKeys: 'Show key words',
+      play: 'Play', pause: 'Pause', resume: 'Play', reset: 'Restart', slow: 'Slow', mid: 'Normal', fast: 'Fast',
+      jump: 'Stop at', jBottom: 'Bottom', jUp: 'Rising', jTop: 'Top', jDown: 'Sinking', jumpNote: 'Pauses at that point so you can ask questions.',
+      show: 'Show', cIso: 'Environment isotherms', cPath: 'Loop path', cTrail: 'Footprints (temperature and size)', cCmp: 'Compare with the same mass of water around', cWords: 'Process words',
+      scaleNote: 'Real expansion is tiny. Size changes are exaggerated.',
+      heater: 'Heat', parcel: 'Water blob', same: 'Same mass of water around', iso: 'Environment isotherms', height: 'Height (cm)', heightM: 'Height (m)',
+      wHeat: 'heats up, expands', wRise: 'rises', wCool: 'cools at the surface, shrinks', wSink: 'sinks', outside: 'Air outside', burner: 'Burner',
+      warmer: (d) => `${d} °C warmer`, cooler: (d) => `${d} °C cooler`, equal: 'Same'
+    }
+  }
+  let lang = 'en'
+  const t = (k) => T[lang][k]
+  function applyLang () {
+    document.documentElement.lang = lang === 'zh' ? 'zh-Hant-TW' : 'en'
+    document.querySelectorAll('[data-t]').forEach((el) => { const v = T[lang][el.dataset.t]; if (typeof v === 'string') el.textContent = v })
+    document.title = t('title')
+    syncPlay(); syncAns(); syncKeys()
+  }
+
+  // ---------- 熱對流物理設定 ----------
+  // 水箱座標：x 0～100（左到右），y 0～100（底到頂），水深 20 cm
+  // 周圍水溫隨高度線性下降：底 60 °C、頂 40 °C
+  const DEPTH_CM = 20
+  const amb = (y) => 60 - 0.2 * y
+  const ISO = [58, 54, 50, 46, 42] // 環境等溫線，對應 y = 10、30、50、70、90
+  const isoY = (T0) => (60 - T0) / 0.2
+  // 水團和周圍的溫差：上升段 +4、下沉段 −4；頂部在水面散熱、底部在熱源上方受熱
+  const D = 4
+  const lerp = (a, b, k) => a + (b - a) * Math.max(0, Math.min(1, k))
+  function offset (p) {
+    if (p.leg === 'up') return D
+    if (p.leg === 'down') return -D
+    if (p.leg === 'top') return lerp(D, -D, (p.x - 40) / 28)
+    return lerp(-D, D, (60 - p.x) / 28) // bottom
+  }
+  // 圓的半徑：溫度每高 1 °C 放大 2.5%（誇大顯示）
+  const sizeK = (T0) => 1 + 0.025 * (T0 - 50)
+
+  // 循環路徑：左側上升、沿水面往右、右側下沉、沿底部回到熱源上方
+  const L = 22, R = 78, B = 12, TP = 88, RC = 10
+  const path = []
+  ;(function buildPath () {
+    const add = (x, y, leg) => path.push({ x, y, leg })
+    const seg = (x0, y0, x1, y1, leg, n) => { for (let i = 0; i < n; i++) add(lerp(x0, x1, i / n), lerp(y0, y1, i / n), leg) }
+    const arc = (cx, cy, a0, a1, leg, n) => { for (let i = 0; i < n; i++) { const a = lerp(a0, a1, i / n); add(cx + RC * Math.cos(a), cy + RC * Math.sin(a), leg) } }
+    seg(L, B + RC, L, TP - RC, 'up', 120)
+    arc(L + RC, TP - RC, Math.PI, Math.PI / 2, 'top', 20)
+    seg(L + RC, TP, R - RC, TP, 'top', 90)
+    arc(R - RC, TP - RC, Math.PI / 2, 0, 'top', 20)
+    seg(R, TP - RC, R, B + RC, 'down', 120)
+    arc(R - RC, B + RC, 0, -Math.PI / 2, 'bottom', 20)
+    seg(R - RC, B, L + RC, B, 'bottom', 90)
+    arc(L + RC, B + RC, -Math.PI / 2, -Math.PI, 'bottom', 20)
+    let acc = 0
+    path.forEach((p, i) => { if (i) acc += Math.hypot(p.x - path[i - 1].x, p.y - path[i - 1].y); p.d = acc })
+    const last = path[path.length - 1]
+    path.total = acc + Math.hypot(path[0].x - last.x, path[0].y - last.y)
+  })()
+  function at (s) {
+    const d = ((s % 1) + 1) % 1 * path.total
+    let i = 0
+    while (i < path.length - 1 && path[i + 1].d <= d) i++
+    const a = path[i], b = path[(i + 1) % path.length]
+    const span = (i + 1 < path.length ? b.d : path.total) - a.d
+    const k = span > 0 ? (d - a.d) / span : 0
+    const p = { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), leg: a.leg }
+    p.amb = amb(p.y); p.T = p.amb + offset(p)
+    return p
+  }
+  const sOf = (pred) => { const p = path.find(pred); return p.d / path.total }
+  // 足跡位置：上升段與下沉段各三個，頂部與底部各兩個
+  const MARKS = [
+    ...[30, 50, 70].map((y) => sOf((p) => p.leg === 'up' && p.y >= y)),
+    ...[42, 62].map((x) => sOf((p) => p.leg === 'top' && p.y === TP && p.x >= x)),
+    ...[70, 50, 30].map((y) => sOf((p) => p.leg === 'down' && p.y <= y)),
+    ...[60, 40].map((x) => sOf((p) => p.leg === 'bottom' && p.y === B && p.x <= x))
+  ].sort((a, b) => a - b)
+  const JUMP = {
+    bottom: sOf((p) => p.leg === 'bottom' && p.y === B && p.x <= 46),
+    up: sOf((p) => p.leg === 'up' && p.y >= 50),
+    top: sOf((p) => p.leg === 'top' && p.y === TP && p.x >= 50),
+    down: sOf((p) => p.leg === 'down' && p.y <= 50)
+  }
+  // 四個步驟的編號，第 2、3 頁共用：1 受熱、2 上升、3 散熱、4 下沉
+  const STEPS = ['bottom', 'up', 'top', 'down']
+
+  // ---------- 狀態 ----------
+  const S = { s: 0.02, playing: true, speed: 1, laps: 0, start: 0.02 }
+  const LAP_SEC = 16
+  // 熱氣球三個步驟的畫面：裡面空氣溫度、氣球大小、離地高度（0～1）
+  const BSTEPS = [{ Tin: 35, scale: 0.72, h: 0 }, { Tin: 100, scale: 1, h: 0 }, { Tin: 100, scale: 1, h: 1 }]
+  let page = 1
+
+  // ---------- 畫布：三張畫布共用同一組繪圖函式 ----------
+  const V = { main: { cv: document.getElementById('cv') }, cyc: { cv: document.getElementById('cvC') } }
+  const VB = [...document.querySelectorAll('.cvB')].map((cv) => ({ cv }))
+  ;[...Object.values(V), ...VB].forEach((v) => { v.ctx = v.cv.getContext('2d'); v.G = {} })
+  let cv, ctx, G
+  const use = (v) => { cv = v.cv; ctx = v.ctx; G = v.G }
+  let C = {}
+  function readColors () {
+    const cs = getComputedStyle(document.documentElement)
+    const g = (k) => cs.getPropertyValue(k).trim()
+    C = { ink: g('--ink'), muted: g('--ink-muted'), card: g('--surface-card'), line: g('--line'), amberText: g('--amber-text'), slate: g('--surface-slate'), onSlate: g('--on-slate') }
+  }
+  const font = (px, w = 400) => `${w} ${px}px ${getComputedStyle(document.body).fontFamily}`
+  function layout () {
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1
+    if (!r.width) return
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    G.W = r.width; G.H = r.height; G.narrow = G.W < 560
+    G.f = G.narrow ? 13 : 17
+    G.l = G.narrow ? 40 : 64; G.r = G.narrow ? 54 : 84; G.t = G.narrow ? 60 : 72; G.b = G.narrow ? 70 : 86
+    G.sx = (G.W - G.l - G.r) / 100; G.sy = (G.H - G.t - G.b) / 100
+    G.r0 = Math.max(16, Math.min(44, Math.min(G.sx, G.sy) * 6.5))
+  }
+  function layoutVisible () {
+    const list = page === 1 ? VB : page === 2 ? [V.main] : [V.cyc]
+    list.forEach((v) => { use(v); layout() })
+  }
+  const px = (x) => G.l + x * G.sx
+  const py = (y) => G.t + (100 - y) * G.sy
+
+  // 溫度 → 顏色（lo 藍、hi 紅），屬於模擬畫面的物理配色
+  function tColor (T0, a = 1, lo = 38, hi = 62) {
+    const k = Math.max(0, Math.min(1, (T0 - lo) / (hi - lo)))
+    const c0 = [52, 120, 210], c1 = [222, 78, 52]
+    const c = c0.map((v, i) => Math.round(lerp(v, c1[i], k)))
+    return `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${a})`
+  }
+
+  function drawTank () {
+    const x0 = px(0), x1 = px(100), y0 = py(100), y1 = py(0)
+    const g = ctx.createLinearGradient(0, y1, 0, y0)
+    g.addColorStop(0, tColor(60, 0.2)); g.addColorStop(1, tColor(40, 0.2))
+    ctx.fillStyle = g; ctx.fillRect(x0, y0, x1 - x0, y1 - y0)
+    ctx.strokeStyle = C.muted; ctx.lineWidth = 3
+    ctx.beginPath(); ctx.moveTo(x0, y0 - 14); ctx.lineTo(x0, y1); ctx.lineTo(x1, y1); ctx.lineTo(x1, y0 - 14); ctx.stroke()
+    // 水面
+    ctx.strokeStyle = tColor(40, 0.8); ctx.lineWidth = 2
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.stroke()
+    // 高度刻度
+    ctx.fillStyle = C.muted; ctx.font = font(G.f - 2); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'
+    ctx.strokeStyle = C.muted; ctx.lineWidth = 1
+    for (let cm = 0; cm <= DEPTH_CM; cm += 5) {
+      const y = py(cm / DEPTH_CM * 100)
+      ctx.beginPath(); ctx.moveTo(x0 - 6, y); ctx.lineTo(x0, y); ctx.stroke()
+      ctx.fillText(String(cm), x0 - 9, y)
+    }
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'
+    ctx.fillText(t('height'), G.narrow ? 4 : 8, py(100) - 18)
+  }
+
+  function flames (x0, x1, base, h, time, n) {
+    for (let i = 0; i < n; i++) {
+      const cx = n > 1 ? lerp(x0 + 12, x1 - 12, i / (n - 1)) : (x0 + x1) / 2, fl = h * (0.8 + 0.2 * Math.sin(time * 9 + i * 1.7))
+      ctx.fillStyle = tColor(62, 0.85)
+      ctx.beginPath(); ctx.moveTo(cx - 8, base); ctx.quadraticCurveTo(cx - 10, base - fl * 0.5, cx, base - fl); ctx.quadraticCurveTo(cx + 10, base - fl * 0.5, cx + 8, base); ctx.closePath(); ctx.fill()
+    }
+  }
+  function drawHeater (time) {
+    // 爐座在下，火焰往上燒向水箱底部
+    const x0 = px(18), x1 = px(48), base = py(0) + G.b - 22
+    ctx.fillStyle = C.muted
+    ctx.fillRect(x0, base, x1 - x0, 6)
+    flames(x0, x1, base, Math.min(G.b - 34, G.narrow ? 26 : 40), time, 5)
+    ctx.fillStyle = C.ink; ctx.font = font(G.f, 700); ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+    ctx.fillText(t('heater'), x1 + 10, base - 6)
+  }
+
+  function drawIso () {
+    ctx.font = font(G.f, 700); ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+    ISO.forEach((T0) => {
+      const y = py(isoY(T0))
+      ctx.strokeStyle = tColor(T0, 0.7); ctx.lineWidth = 2; ctx.setLineDash([10, 7])
+      ctx.beginPath(); ctx.moveTo(px(0), y); ctx.lineTo(px(100), y); ctx.stroke()
+      ctx.setLineDash([])
+      ctx.fillStyle = tColor(T0, 1)
+      ctx.fillText(`${T0} °C`, px(100) + 8, y)
+    })
+    ctx.fillStyle = C.muted; ctx.font = font(G.f - 2); ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'
+    ctx.fillText(t('iso'), G.W - 6, py(100) - 18)
+  }
+
+  function arrowHead (x, y, ang, s) {
+    ctx.beginPath(); ctx.moveTo(x + s * Math.cos(ang), y + s * Math.sin(ang))
+    ctx.lineTo(x + s * Math.cos(ang + 2.5), y + s * Math.sin(ang + 2.5))
+    ctx.lineTo(x + s * Math.cos(ang - 2.5), y + s * Math.sin(ang - 2.5)); ctx.closePath(); ctx.fill()
+  }
+  function drawPath () {
+    ctx.strokeStyle = C.muted; ctx.lineWidth = 2; ctx.setLineDash([4, 6])
+    ctx.beginPath(); path.forEach((p, i) => (i ? ctx.lineTo(px(p.x), py(p.y)) : ctx.moveTo(px(p.x), py(p.y)))); ctx.closePath(); ctx.stroke()
+    ctx.setLineDash([])
+    ctx.fillStyle = C.muted
+    ;[0.12, 0.37, 0.62, 0.87].forEach((s) => {
+      const a = at(s), b = at(s + 0.004)
+      arrowHead(px(a.x), py(a.y), Math.atan2(py(b.y) - py(a.y), px(b.x) - px(a.x)), G.narrow ? 9 : 12)
+    })
+  }
+
+  // 依可用寬度換行：英文以空白斷詞，中文逐字斷（標點跟著前一個字）
+  function wrap (text, maxW) {
+    const tokens = text.includes(' ') ? text.split(' ').map((w, i, a) => (i < a.length - 1 ? w + ' ' : w)) : text.match(/.[、，,]?/gu)
+    const lines = []; let cur = ''
+    tokens.forEach((tk) => {
+      if (cur && ctx.measureText((cur + tk).trimEnd()).width > maxW) { lines.push(cur.trimEnd()); cur = tk } else cur += tk
+    })
+    if (cur) lines.push(cur.trimEnd())
+    return lines
+  }
+  // 在 (cx, cy) 置中畫一段文字，底下墊半透明卡片底色，避免壓在足跡上看不清楚
+  function wordBox (text, cx, cy, maxW) {
+    const fs = G.f + (G.narrow ? 0 : 1)
+    ctx.font = font(fs, 700)
+    const lines = wrap(text, maxW), lh = fs * 1.3
+    const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 12, h = lines.length * lh + 6
+    ctx.globalAlpha = 0.85; ctx.fillStyle = C.card
+    ctx.fillRect(cx - w / 2, cy - h / 2, w, h); ctx.globalAlpha = 1
+    ctx.fillStyle = C.amberText; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    lines.forEach((l, i) => ctx.fillText(l, cx, cy - h / 2 + 3 + lh * (i + 0.5)))
+  }
+  function drawWords () {
+    const inner = px(R) - px(L)
+    const side = inner / 2 - G.r0 - 14
+    wordBox(t('wRise'), px(L) + G.r0 + 7 + side / 2, py(55), side)
+    wordBox(t('wSink'), px(R) - G.r0 - 7 - side / 2, py(55), side)
+    wordBox(t('wCool'), px(50), py(TP) + G.r0 + 26, inner - 24)
+    wordBox(t('wHeat'), px(50), py(B) - G.r0 - 26, inner - 24)
+  }
+
+  function drawBlob (p, alpha, labelSize, solid) {
+    const r = G.r0 * sizeK(p.T), x = px(p.x), y = py(p.y)
+    ctx.fillStyle = tColor(p.T, solid ? 0.9 : 0.22)
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill()
+    ctx.strokeStyle = tColor(p.T, solid ? 1 : 0.6); ctx.lineWidth = solid ? 3 : 1.5
+    ctx.stroke()
+    const label = `${Math.round(p.T)}°C`
+    ctx.font = font(labelSize, 700); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    if (solid && r > labelSize * 1.6) {
+      ctx.fillStyle = '#ffffff'; ctx.fillText(label, x, y)
+    } else {
+      ctx.fillStyle = solid ? C.ink : tColor(p.T, alpha)
+      ctx.fillText(label, x, y - r - labelSize * 0.7)
+    }
+  }
+
+  function drawCompare (p) {
+    const r = G.r0 * sizeK(p.amb)
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.setLineDash([6, 5])
+    ctx.beginPath(); ctx.arc(px(p.x), py(p.y), r, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([])
+  }
+
+  function legend (showCmp) {
+    ctx.font = font(G.f - 1); ctx.textAlign = 'left'; ctx.textBaseline = 'middle'
+    const y = G.narrow ? 16 : 22
+    let x = G.narrow ? 8 : 12
+    ctx.fillStyle = tColor(56, 0.9); ctx.beginPath(); ctx.arc(x + 8, y, 8, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = C.ink; ctx.fillText(t('parcel'), x + 22, y)
+    x += 22 + ctx.measureText(t('parcel')).width + 18
+    if (showCmp) {
+      ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.setLineDash([4, 4])
+      ctx.beginPath(); ctx.arc(x + 8, y, 8, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([])
+      ctx.fillStyle = C.ink; ctx.fillText(t('same'), x + 22, y)
+    }
+  }
+
+  // 第 2 頁：動畫
+  let curStep = -1
+  function drawMain (time) {
+    ctx.clearRect(0, 0, G.W, G.H)
+    drawTank()
+    if (chk.iso.checked) drawIso()
+    if (chk.path.checked) drawPath()
+    drawHeater(time)
+    if (chk.words.checked) drawWords()
+    const p = at(S.s)
+    if (chk.trail.checked) {
+      MARKS.forEach((m) => {
+        if (S.laps === 0 && m > S.s) return
+        const q = at(m)
+        if (Math.hypot(px(q.x) - px(p.x), py(q.y) - py(p.y)) < G.r0 * 1.2) return
+        drawBlob(q, 0.95, G.f - 3, false)
+      })
+    }
+    drawBlob(p, 1, G.f + 2, true)
+    if (chk.cmp.checked) drawCompare(p)
+    legend(chk.cmp.checked)
+    // 讀數
+    const d = Math.round(p.T) - Math.round(p.amb)
+    rv.H.textContent = `${(p.y / 100 * DEPTH_CM).toFixed(1)} cm`
+    rv.T.textContent = `${Math.round(p.T)} °C`
+    rv.A.textContent = `${Math.round(p.amb)} °C`
+    rv.D.textContent = d > 0 ? T[lang].warmer(d) : d < 0 ? T[lang].cooler(-d) : t('equal')
+    // 右側句型：亮起水團目前所在的那一步
+    const k = STEPS.indexOf(p.leg)
+    if (k !== curStep) {
+      curStep = k
+      document.querySelectorAll('#sents .sent').forEach((el, i) => el.setAttribute('aria-current', String(i === k)))
+    }
+  }
+
+  // 第 3 頁：靜態循環圖，所有足跡都畫出來，標上四個步驟編號
+  function drawCycle (time) {
+    ctx.clearRect(0, 0, G.W, G.H)
+    drawTank(); drawIso(); drawPath(); drawHeater(time)
+    MARKS.forEach((m) => drawBlob(at(m), 0.95, G.f - 2, false))
+    const where = { bottom: [50, B - 8], up: [L - 11, 50], top: [50, TP + 7], down: [R + 11, 50] }
+    const rr = G.narrow ? 12 : 16
+    STEPS.forEach((st, i) => {
+      const [x, y] = where[st]
+      ctx.fillStyle = C.slate; ctx.beginPath(); ctx.arc(px(x), py(y), rr, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = C.onSlate; ctx.font = font(rr * 1.1, 700); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.fillText(String(i + 1), px(x), py(y) + 1)
+    })
+    legend(false)
+  }
+
+  // 第 1 頁：熱氣球（一個步驟一張圖）
+  function drawBalloon (st, time) {
+    const W = G.W, H = G.H
+    ctx.clearRect(0, 0, W, H)
+    const ground = H - 16
+    // 地面（模擬畫面的物理配色）
+    ctx.fillStyle = 'rgba(110, 160, 80, 0.45)'; ctx.fillRect(0, ground, W, 16)
+    // 氣球全高約 3.1 個半徑；留約一個半徑的空間，起飛時才看得出離地
+    const R0 = Math.min(W * 0.16, (H - 30) / 4.1), R = R0 * st.scale
+    const bw = R0 * 0.5, bh = R0 * 0.36
+    const total = R * 1.95 + R0 * 0.75 + bh
+    const cx = W * 0.42
+    const basketY = ground - st.h * (ground - 12 - total)
+    const neckY = basketY - bh - R0 * 0.75
+    const cy = neckY - R * 0.95
+    // 繩子
+    ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5
+    ctx.beginPath(); ctx.moveTo(cx - bw / 2, basketY - bh); ctx.lineTo(cx - R0 * 0.32, neckY); ctx.moveTo(cx + bw / 2, basketY - bh); ctx.lineTo(cx + R0 * 0.32, neckY); ctx.stroke()
+    // 燃燒器火焰
+    flames(cx - 10, cx + 10, basketY - bh - 2, R0 * 0.45, time, 1)
+    // 球皮
+    const a = Math.PI * 0.18
+    ctx.fillStyle = tColor(st.Tin, 0.9, 20, 110)
+    ctx.beginPath()
+    ctx.arc(cx, cy, R, Math.PI - a, a)
+    ctx.quadraticCurveTo(cx + R * 0.75, neckY - R * 0.25, cx + R0 * 0.32, neckY)
+    ctx.lineTo(cx - R0 * 0.32, neckY)
+    ctx.quadraticCurveTo(cx - R * 0.75, neckY - R * 0.25, cx - R * Math.cos(a), cy + R * Math.sin(a))
+    ctx.closePath(); ctx.fill()
+    ctx.strokeStyle = tColor(st.Tin, 1, 20, 110); ctx.lineWidth = 2; ctx.stroke()
+    ctx.fillStyle = '#ffffff'; ctx.font = font(Math.max(13, R * 0.34), 700); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    ctx.fillText(`${st.Tin} °C`, cx, cy)
+    // 籃子
+    ctx.fillStyle = C.muted; ctx.fillRect(cx - bw / 2, basketY - bh, bw, bh)
+    // 起飛：往上的箭頭
+    if (st.h > 0) {
+      const ax = cx + R0 * 1.5, ay0 = cy + R0 * 0.9, ay1 = cy - R0 * 0.6
+      ctx.strokeStyle = C.amberText; ctx.fillStyle = C.amberText; ctx.lineWidth = 4
+      ctx.beginPath(); ctx.moveTo(ax, ay0); ctx.lineTo(ax, ay1 + 10); ctx.stroke()
+      arrowHead(ax, ay1, -Math.PI / 2, 14)
+    }
+  }
+
+  // ---------- 第 2 頁句型、第 3 頁模板 ----------
+  // 空格用 {答案}，每句一到兩個空格；句型取自簡報的 when／so／because
+  const SENT = [
+    'When the heater heats the water, the water blob gets {warmer} and {bigger}.',
+    'The water blob is {bigger} than the water around it, so it {rises}.',
+    'When the water blob reaches the top, it gets {cooler} and {smaller}.',
+    'The water blob sinks because it is {smaller} than the water around it.'
+  ]
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+  // 每一步各自有「顯示答案」；按句子本身會讓動畫停在那一步
+  document.getElementById('sents').innerHTML = SENT.map((s, i) =>
+    `<div class="sent" aria-current="false"><button type="button" class="sent-go" data-jump="${STEPS[i]}"><span class="sl-text-caption">Step ${i + 1}</span>` +
+    `<span>${esc(s).replace(/\{([^}]+)\}/g, '<span class="blank"><span class="ans">$1</span></span>')}</span></button>` +
+    '<button type="button" class="sl-btn sent-ans"></button></div>').join('')
+
+  // Cyclical：每步第一句是「X is the first step.」，後面沿用第 2 頁同一步的句型；[關鍵字] 可以遮住再念一次
+  const STEP_NAMES = ['[Heating] is the first step.', '[Rising] is the second step.', '[Cooling] is the third step.', '[Sinking] is the fourth step.']
+  const TPL = [
+    ...SENT.map((s, i) => [i + 1, STEP_NAMES[i] + ' ' + s.replace(/\{/g, '[').replace(/\}/g, ']')]),
+    ['Then the convection cycle starts again.']
+  ]
+  document.getElementById('tpl').innerHTML = '<div class="tpl-lines">' + TPL.map((ln) => {
+    const n = ln.length > 1 ? `<span class="num">${ln[0]}</span>` : ''
+    const text = esc(ln[ln.length - 1]).replace(/\[([^\]]+)\]/g, '<span class="key">$1</span>')
+    return `<div class="tpl-line">${n}<span>${text}</span></div>`
+  }).join('') + '</div>'
+
+  // ---------- 控制 ----------
+  const chk = { iso: chkIso, path: chkPath, trail: chkTrail, cmp: chkCmp, words: chkWords }
+  const rv = { H: rvH, T: rvT, A: rvA, D: rvD }
+  function syncPlay () { btnPlay.textContent = S.playing ? t('pause') : t('resume') }
+  function syncAns () { document.querySelectorAll('#sents .sent').forEach((el) => { el.querySelector('.sent-ans').textContent = el.classList.contains('show-ans') ? t('hideAns') : t('showAns') }) }
+  function syncKeys () { btnKeys.textContent = tpl.classList.contains('hide-keys') ? t('showKeys') : t('hideKeys') }
+  const jumpTo = (k) => { S.s = JUMP[k]; S.playing = false; syncPlay() }
+  btnPlay.addEventListener('click', () => { S.playing = !S.playing; syncPlay() })
+  btnReset.addEventListener('click', () => { S.s = S.start; S.laps = 0; S.playing = true; syncPlay() })
+  segSpeed.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-speed]'); if (!b) return
+    S.speed = Number(b.dataset.speed)
+    segSpeed.querySelectorAll('[data-speed]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)))
+  })
+  segJump.addEventListener('click', (e) => { const b = e.target.closest('[data-jump]'); if (b) jumpTo(b.dataset.jump) })
+  sents.addEventListener('click', (e) => {
+    const a = e.target.closest('.sent-ans')
+    if (a) { a.closest('.sent').classList.toggle('show-ans'); syncAns(); return }
+    const b = e.target.closest('[data-jump]'); if (b) jumpTo(b.dataset.jump)
+  })
+  btnKeys.addEventListener('click', () => { tpl.classList.toggle('hide-keys'); syncKeys() })
+  segLang.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-lang]'); if (!b) return
+    lang = b.dataset.lang
+    segLang.querySelectorAll('[data-lang]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)))
+    applyLang()
+  })
+  function showPage (n) {
+    page = n
+    document.querySelectorAll('main.page').forEach((m) => { m.hidden = Number(m.dataset.page) !== n })
+    segPage.querySelectorAll('[data-page]').forEach((x) => x.setAttribute('aria-pressed', String(Number(x.dataset.page) === n)))
+    layoutVisible()
+    window.scrollTo(0, 0)
+  }
+  segPage.addEventListener('click', (e) => { const b = e.target.closest('[data-page]'); if (b) showPage(Number(b.dataset.page)) })
+  document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => showPage(Number(b.dataset.go))))
+
+  let last = performance.now()
+  function frame (now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now
+    const time = now / 1000
+    if (page === 2) {
+      if (S.playing) { S.s += dt / LAP_SEC * S.speed; if (S.s >= 1) { S.s -= 1; S.laps++ } }
+      use(V.main); if (G.W) drawMain(time)
+    } else if (page === 3) {
+      use(V.cyc); if (G.W) drawCycle(time)
+    } else {
+      VB.forEach((v, i) => { use(v); if (G.W) drawBalloon(BSTEPS[i], time) })
+    }
+    requestAnimationFrame(frame)
+  }
+  readColors(); applyLang(); layoutVisible()
+  window.addEventListener('resize', layoutVisible)
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors)
+  requestAnimationFrame(frame)
+})()
+</script>
+</body>
+</html>

@@ -47,8 +47,9 @@
     `<button class="sl-btn${S.cls === c.code ? ' sl-btn-slate' : ''}" type="button" data-act="cls" data-v="${c.code}" aria-pressed="${S.cls === c.code}">${Site.classLabel(c.code)}</button>`).join('')
 
   const unitCard = (u) => {
-    const badge = '<span class="sl-badge sl-badge-success">三種模式都有</span>'
-    const hint = `開啟${Site.MODES[S.mode]}`
+    // 沒有三種模式的單元（例如英語演示用的學習單）在清單裡寫 badge，卡片照實標示
+    const badge = `<span class="sl-badge sl-badge-success">${esc(u.badge || '三種模式都有')}</span>`
+    const hint = u.badge ? '開啟單元' : `開啟${Site.MODES[S.mode]}`
     return `<button class="sl-card card-btn" type="button" data-act="unit" data-v="${esc(u.id)}">
       <span class="card-title">${esc(u.title)}</span>
       <span class="sl-card-label">${esc(u.meta)}</span>

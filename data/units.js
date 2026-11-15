@@ -1,5 +1,6 @@
 // 單元清單：導覽頁、課綱對照、地科索引共用。新增單元只改這個檔
 // status：ready＝三種模式都有；plan＝只有教案；external＝外部模擬的整理頁
+// badge：選填，沒有三種模式的 ready 單元用它取代卡片上的「三種模式都有」
 // codes：這個單元對應的課綱學習內容條目，課綱對照與地科索引用它標出「我的單元」
 window.UNIT_GROUPS = ['高中物理', '國中理化', '國中地科']
 window.UNITS = [
@@ -38,6 +39,16 @@ window.UNITS = [
     codes: ['Ab-IV-1', 'Ab-IV-3', 'Ab-IV-4', 'Ca-IV-1'],
     status: 'ready',
     href: 'units/matter.html'
+  },
+  {
+    id: 'convection',
+    group: '國中理化',
+    title: '熱對流（Explain genre 英語演示）',
+    meta: '國中二年級．Bb-IV-4、Bb-IV-5',
+    badge: '三頁學習單',
+    codes: ['Bb-IV-4', 'Bb-IV-5'],
+    status: 'ready',
+    href: 'units/convection.html'
   },
   {
     id: 'es-index',
