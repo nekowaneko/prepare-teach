@@ -33,6 +33,9 @@
   .sheet h2, .sheet h3, .sheet p { margin: 0; }
   .bank { display: flex; flex-wrap: wrap; gap: var(--space-2); }
   .bank .sl-badge { font-size: 14px; line-height: 22px; } /* 老師要求：比預設大 2px */
+  /* 每個英文字下面加中文輔助：兩行，所以改成圓角方框 */
+  .bank .sl-badge { display: inline-grid; justify-items: center; padding: var(--space-1) var(--space-3); border-radius: var(--radius-md); }
+  .bank .zh { font-size: 13px; line-height: 18px; color: var(--ink-muted); }
 
   /* 第 1 頁：熱氣球三個步驟，圖在左、英文在右 */
   /* 第 1 頁　左：熱氣球嘉年華海報｜右：問句 */
@@ -46,6 +49,9 @@
   .btext h3 { margin: 0; font-size: inherit; }
   /* 承先啟後的問句與回答 */
   .bridge p { margin: 0; }
+  /* convection 下面標中文 */
+  .gloss { display: inline-grid; justify-items: center; }
+  .gloss .zh { font-size: 0.6em; line-height: 1.2; font-weight: 400; color: var(--ink-muted); }
   .bridge .bridge-ans { margin-top: var(--space-4); font-size: 0.7em; color: var(--ink); }
   .bridge { margin: 0; display: grid; place-items: center; text-align: center; font-size: clamp(28px, 3.4vw, 48px); line-height: 1.3; font-weight: 700; padding: var(--space-4); border-radius: var(--radius-lg); background: var(--amber-soft); color: var(--amber-text); }
 
@@ -118,7 +124,7 @@
     <h2 class="sl-text-title">Warm-up</h2>
     <div class="p1grid">
       <figure class="poster"><img src="img/balloon-festival.webp" alt="2026 臺灣國際熱氣球嘉年華海報，臺東鹿野高台" width="960" height="1280"></figure>
-      <div class="bridge"><div><p>How does a hot air balloon fly?</p><p class="bridge-ans">Because <u>convection</u> makes the balloon fly.</p></div></div>
+      <div class="bridge"><div><p>How does a hot air balloon fly?</p><p class="bridge-ans">Because <span class="gloss"><u>convection</u><span class="zh">對流</span></span> makes the balloon fly.</p></div></div>
     </div>
   </section>
   <div class="pager"><span></span><button class="sl-btn" type="button" data-go="2" data-t="next">下一頁</button></div>
@@ -140,8 +146,8 @@
       <h2 class="sl-text-title">How does the water move?</h2>
       <h3 class="sl-text-label">Word bank</h3>
       <div class="bank">
-        <span class="sl-badge">warmer</span><span class="sl-badge">cooler</span><span class="sl-badge">bigger</span>
-        <span class="sl-badge">smaller</span><span class="sl-badge">rises</span><span class="sl-badge">sinks</span>
+        <span class="sl-badge"><span>warmer</span><span class="zh">比較熱</span></span><span class="sl-badge"><span>cooler</span><span class="zh">比較冷</span></span><span class="sl-badge"><span>bigger</span><span class="zh">比較大</span></span>
+        <span class="sl-badge"><span>smaller</span><span class="zh">比較小</span></span><span class="sl-badge"><span>rises</span><span class="zh">上升</span></span><span class="sl-badge"><span>sinks</span><span class="zh">下沉</span></span>
       </div>
       <div class="sents" id="sents"></div>
       <p class="note sl-text-caption" data-t="sentNote">按句子會讓動畫停在那一步。</p>
