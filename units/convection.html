@@ -149,6 +149,7 @@
         <span class="sl-badge"><span>warmer</span><span class="zh">比較熱</span></span><span class="sl-badge"><span>cooler</span><span class="zh">比較冷</span></span><span class="sl-badge"><span>bigger</span><span class="zh">比較大</span></span>
         <span class="sl-badge"><span>smaller</span><span class="zh">比較小</span></span><span class="sl-badge"><span>rises</span><span class="zh">上升</span></span><span class="sl-badge"><span>sinks</span><span class="zh">下沉</span></span>
       </div>
+      <div class="seg"><button class="sl-btn" type="button" id="btnHideAll" data-t="hideAll">全部隱藏答案</button></div>
       <div class="sents" id="sents"></div>
       <p class="note sl-text-caption" data-t="sentNote">按句子會讓動畫停在那一步。</p>
     </section>
@@ -236,7 +237,7 @@
       back: '回導覽', title: '熱對流', draft: '草稿', p1: '1 熱氣球', p2: '2 動畫與句型', p3: '3 循環模板', p4: '4 熱氣球步驟', prev: '上一頁', next: '下一頁',
       bIn: '氣球裡的空氣', bOut: '外面的空氣', bH: '高度', burnerOn: '打開燃燒器', burnerOff: '關掉燃燒器',
       rHeight: '高度', rParcel: '水團溫度', rAmb: '周圍水溫', rDiff: '和周圍比',
-      showAns: '顯示答案', hideAns: '隱藏答案', sentNote: '按句子會讓動畫停在那一步。', hideKeys: '遮住關鍵字', showKeys: '顯示關鍵字',
+      showAns: '顯示答案', hideAns: '隱藏答案', hideAll: '全部隱藏答案', sentNote: '按句子會讓動畫停在那一步。', hideKeys: '遮住關鍵字', showKeys: '顯示關鍵字',
       play: '播放', pause: '暫停', resume: '播放', reset: '從頭開始', slow: '慢', mid: '中', fast: '快',
       jump: '停在', jBottom: '底部', jUp: '上升中', jTop: '頂部', jDown: '下沉中', jumpNote: '按下會暫停在那個位置，方便提問。',
       show: '顯示', cIso: '環境等溫線', cPath: '循環路徑', cTrail: '水團足跡（溫度與大小）', cCmp: '和周圍同量的水比大小', cWords: '過程文字',
@@ -249,7 +250,7 @@
       back: 'Home', title: 'Convection', draft: 'Draft', p1: '1 Hot air balloon', p2: '2 Animation and sentences', p3: '3 Cycle template', p4: '4 Hot air balloon steps', prev: 'Back', next: 'Next',
       bIn: 'Air inside', bOut: 'Air outside', bH: 'Height', burnerOn: 'Turn on burner', burnerOff: 'Turn off burner',
       rHeight: 'Height', rParcel: 'Water blob', rAmb: 'Water around', rDiff: 'Compared',
-      showAns: 'Show answer', hideAns: 'Hide answer', sentNote: 'Tap a sentence to stop the animation at that step.', hideKeys: 'Hide key words', showKeys: 'Show key words',
+      showAns: 'Show answer', hideAns: 'Hide answer', hideAll: 'Hide all answers', sentNote: 'Tap a sentence to stop the animation at that step.', hideKeys: 'Hide key words', showKeys: 'Show key words',
       play: 'Play', pause: 'Pause', resume: 'Play', reset: 'Restart', slow: 'Slow', mid: 'Normal', fast: 'Fast',
       jump: 'Stop at', jBottom: 'Bottom', jUp: 'Rising', jTop: 'Top', jDown: 'Sinking', jumpNote: 'Pauses at that point so you can ask questions.',
       show: 'Show', cIso: 'Environment isotherms', cPath: 'Loop path', cTrail: 'Footprints (temperature and size)', cCmp: 'Compare with the same mass of water around', cWords: 'Process words',
@@ -657,6 +658,8 @@
     if (a) { a.closest('.sent').classList.toggle('show-ans'); syncAns(); return }
     const b = e.target.closest('[data-jump]'); if (b) jumpTo(b.dataset.jump)
   })
+  // 一鍵回復：把四句的答案全部藏起來，方便重複演示
+  btnHideAll.addEventListener('click', () => { document.querySelectorAll('#sents .sent').forEach((el) => el.classList.remove('show-ans')); syncAns() })
   btnKeys.addEventListener('click', () => { tpl.classList.toggle('hide-keys'); syncKeys() })
   segLang.addEventListener('click', (e) => {
     const b = e.target.closest('[data-lang]'); if (!b) return
