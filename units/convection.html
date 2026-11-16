@@ -44,7 +44,9 @@
   .bstep .canvas-wrap { background: var(--surface-page); }
   .btext { display: flex; gap: var(--space-3); align-items: baseline; font-size: clamp(20px, 2vw, 26px); line-height: 1.5; }
   .btext h3 { margin: 0; font-size: inherit; }
-  /* 承先啟後的問句 */
+  /* 承先啟後的問句與回答 */
+  .bridge p { margin: 0; }
+  .bridge .bridge-ans { margin-top: var(--space-4); font-size: 0.7em; color: var(--ink); }
   .bridge { margin: 0; display: grid; place-items: center; text-align: center; font-size: clamp(28px, 3.4vw, 48px); line-height: 1.3; font-weight: 700; padding: var(--space-4); border-radius: var(--radius-lg); background: var(--amber-soft); color: var(--amber-text); }
 
   /* 第 2 頁：句型 */
@@ -116,7 +118,7 @@
     <h2 class="sl-text-title">Warm-up</h2>
     <div class="p1grid">
       <figure class="poster"><img src="img/balloon-festival.webp" alt="2026 臺灣國際熱氣球嘉年華海報，臺東鹿野高台" width="960" height="1280"></figure>
-      <p class="bridge">How does a hot air balloon fly?</p>
+      <div class="bridge"><div><p>How does a hot air balloon fly?</p><p class="bridge-ans">Because <u>convection</u> makes the balloon fly.</p></div></div>
     </div>
   </section>
   <div class="pager"><span></span><button class="sl-btn" type="button" data-go="2" data-t="next">下一頁</button></div>
