@@ -24,7 +24,7 @@
   .canvas-wrap { background: var(--surface-card); border-radius: var(--radius-lg); overflow: hidden; }
   canvas { display: block; width: 100%; }
   #cv, #cvC { height: clamp(460px, 64vh, 720px); }
-  .cvB { height: clamp(150px, 19vh, 210px); }
+  .cvB { height: clamp(170px, 22vh, 240px); }
   .readouts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .readouts.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .readouts .sl-card-value { font-size: clamp(18px, 2.2vw, 28px); }
@@ -35,8 +35,8 @@
   .bank .sl-badge { font-size: 14px; line-height: 22px; } /* 老師要求：比預設大 2px */
 
   /* 第 1 頁：熱氣球三個步驟，圖在左、英文在右 */
-  /* 左：熱氣球嘉年華海報｜右：三個步驟（圖窄、只留大字） */
-  .p1grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: var(--space-4); align-items: start; }
+  /* 第 1 頁　左：熱氣球嘉年華海報｜右：問句 */
+  .p1grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: var(--space-4); align-items: stretch; }
   .poster { margin: 0; }
   .poster img { display: block; width: 100%; height: auto; border-radius: var(--radius-lg); }
   .bsteps { display: grid; gap: var(--space-3); }
@@ -45,7 +45,7 @@
   .btext { display: flex; gap: var(--space-3); align-items: baseline; font-size: clamp(20px, 2vw, 26px); line-height: 1.5; }
   .btext h3 { margin: 0; font-size: inherit; }
   /* 承先啟後的問句 */
-  .bridge { margin: 0; text-align: center; font-size: clamp(24px, 2.6vw, 34px); font-weight: 700; padding: var(--space-4); border-radius: var(--radius-lg); background: var(--amber-soft); color: var(--amber-text); }
+  .bridge { margin: 0; display: grid; place-items: center; text-align: center; font-size: clamp(28px, 3.4vw, 48px); line-height: 1.3; font-weight: 700; padding: var(--space-4); border-radius: var(--radius-lg); background: var(--amber-soft); color: var(--amber-text); }
 
   /* 第 2 頁：句型 */
   .sents { display: grid; gap: var(--space-2); }
@@ -101,6 +101,7 @@
     <button class="sl-btn" type="button" data-page="1" aria-pressed="true" data-t="p1">1 熱氣球</button>
     <button class="sl-btn" type="button" data-page="2" aria-pressed="false" data-t="p2">2 動畫與句型</button>
     <button class="sl-btn" type="button" data-page="3" aria-pressed="false" data-t="p3">3 循環模板</button>
+    <button class="sl-btn" type="button" data-page="4" aria-pressed="false" data-t="p4">4 熱氣球步驟</button>
   </div>
   <!-- 老師要求隱藏語言切換，固定英文；中文介面文字保留在程式裡 -->
   <div class="seg" role="group" aria-label="語言" id="segLang" hidden>
@@ -112,25 +113,11 @@
 <!-- 第 1 頁：熱氣球引起動機（老師念），三個步驟 -->
 <main class="page" id="page1" data-page="1">
   <section class="sheet" aria-label="Hot air balloon">
-    <h2 class="sl-text-title">Warm-up: How does a hot air balloon fly?</h2>
+    <h2 class="sl-text-title">Warm-up</h2>
     <div class="p1grid">
       <figure class="poster"><img src="img/balloon-festival.webp" alt="2026 臺灣國際熱氣球嘉年華海報，臺東鹿野高台" width="960" height="1280"></figure>
-      <div class="bsteps">
-        <div class="bstep">
-          <div class="canvas-wrap"><canvas class="cvB" data-step="0" aria-label="燃燒器加熱氣球裡的空氣"></canvas></div>
-          <div class="btext"><span class="num">1</span><h3>Heat the balloon.</h3></div>
-        </div>
-        <div class="bstep">
-          <div class="canvas-wrap"><canvas class="cvB" data-step="1" aria-label="氣球裡的空氣變熱膨脹，氣球變大"></canvas></div>
-          <div class="btext"><span class="num">2</span><h3>The balloon expands.</h3></div>
-        </div>
-        <div class="bstep">
-          <div class="canvas-wrap"><canvas class="cvB" data-step="2" aria-label="氣球起飛"></canvas></div>
-          <div class="btext"><span class="num">3</span><h3>The balloon takes off.</h3></div>
-        </div>
-      </div>
+      <p class="bridge">How does a hot air balloon fly?</p>
     </div>
-    <p class="bridge">Why does the balloon take off?</p>
   </section>
   <div class="pager"><span></span><button class="sl-btn" type="button" data-go="2" data-t="next">下一頁</button></div>
 </main>
@@ -207,7 +194,29 @@
       <div class="seg"><button class="sl-btn" type="button" id="btnKeys" data-t="hideKeys">遮住關鍵字</button></div>
     </section>
   </div>
-  <div class="pager"><button class="sl-btn" type="button" data-go="2" data-t="prev">上一頁</button><span></span></div>
+  <div class="pager"><button class="sl-btn" type="button" data-go="2" data-t="prev">上一頁</button><button class="sl-btn" type="button" data-go="4" data-t="next">下一頁</button></div>
+</main>
+
+<!-- 第 4 頁：回到熱氣球，三個步驟（原本在第 1 頁右邊） -->
+<main class="page" id="page4" data-page="4" hidden>
+  <section class="sheet" aria-label="Hot air balloon">
+    <h2 class="sl-text-title">How does a hot air balloon fly?</h2>
+    <div class="bsteps">
+      <div class="bstep">
+        <div class="canvas-wrap"><canvas class="cvB" data-step="0" aria-label="燃燒器加熱氣球裡的空氣"></canvas></div>
+        <div class="btext"><span class="num">1</span><h3>Heat the balloon.</h3></div>
+      </div>
+      <div class="bstep">
+        <div class="canvas-wrap"><canvas class="cvB" data-step="1" aria-label="氣球裡的空氣變熱膨脹，氣球變大"></canvas></div>
+        <div class="btext"><span class="num">2</span><h3>The balloon expands.</h3></div>
+      </div>
+      <div class="bstep">
+        <div class="canvas-wrap"><canvas class="cvB" data-step="2" aria-label="氣球起飛"></canvas></div>
+        <div class="btext"><span class="num">3</span><h3>The balloon takes off.</h3></div>
+      </div>
+    </div>
+  </section>
+  <div class="pager"><button class="sl-btn" type="button" data-go="3" data-t="prev">上一頁</button><span></span></div>
 </main>
 
 <script src="../site.js"></script>
@@ -216,7 +225,7 @@
   // ---------- 介面文字（學習單內容固定用英文） ----------
   const T = {
     zh: {
-      back: '回導覽', title: '熱對流', draft: '草稿', p1: '1 熱氣球', p2: '2 動畫與句型', p3: '3 循環模板', prev: '上一頁', next: '下一頁',
+      back: '回導覽', title: '熱對流', draft: '草稿', p1: '1 熱氣球', p2: '2 動畫與句型', p3: '3 循環模板', p4: '4 熱氣球步驟', prev: '上一頁', next: '下一頁',
       bIn: '氣球裡的空氣', bOut: '外面的空氣', bH: '高度', burnerOn: '打開燃燒器', burnerOff: '關掉燃燒器',
       rHeight: '高度', rParcel: '水團溫度', rAmb: '周圍水溫', rDiff: '和周圍比',
       showAns: '顯示答案', hideAns: '隱藏答案', sentNote: '按句子會讓動畫停在那一步。', hideKeys: '遮住關鍵字', showKeys: '顯示關鍵字',
@@ -229,7 +238,7 @@
       warmer: (d) => `熱 ${d} °C`, cooler: (d) => `冷 ${d} °C`, equal: '一樣'
     },
     en: {
-      back: 'Home', title: 'Convection', draft: 'Draft', p1: '1 Hot air balloon', p2: '2 Animation and sentences', p3: '3 Cycle template', prev: 'Back', next: 'Next',
+      back: 'Home', title: 'Convection', draft: 'Draft', p1: '1 Hot air balloon', p2: '2 Animation and sentences', p3: '3 Cycle template', p4: '4 Hot air balloon steps', prev: 'Back', next: 'Next',
       bIn: 'Air inside', bOut: 'Air outside', bH: 'Height', burnerOn: 'Turn on burner', burnerOff: 'Turn off burner',
       rHeight: 'Height', rParcel: 'Water blob', rAmb: 'Water around', rDiff: 'Compared',
       showAns: 'Show answer', hideAns: 'Hide answer', sentNote: 'Tap a sentence to stop the animation at that step.', hideKeys: 'Hide key words', showKeys: 'Show key words',
@@ -350,7 +359,7 @@
     G.r0 = Math.max(16, Math.min(44, Math.min(G.sx, G.sy) * 6.5))
   }
   function layoutVisible () {
-    const list = page === 1 ? VB : page === 2 ? [V.main] : [V.cyc]
+    const list = page === 4 ? VB : page === 2 ? [V.main] : page === 3 ? [V.cyc] : []
     list.forEach((v) => { use(v); layout() })
   }
   const px = (x) => G.l + x * G.sx
@@ -666,7 +675,7 @@
       use(V.main); if (G.W) drawMain(time)
     } else if (page === 3) {
       use(V.cyc); if (G.W) drawCycle(time)
-    } else {
+    } else if (page === 4) {
       VB.forEach((v, i) => { use(v); if (G.W) drawBalloon(BSTEPS[i], time) })
     }
     requestAnimationFrame(frame)
