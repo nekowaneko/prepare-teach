@@ -611,12 +611,12 @@
   }
 
   // ---------- 第 2 頁句型、第 3 頁模板 ----------
-  // 空格用 {答案}，每句一到兩個空格；句型取自簡報的 when／so／because
+  // 空格用 {答案}，每句一到兩個空格；句型取自簡報的 when／so
   const SENT = [
     'When the heater heats the water, the water blob gets {warmer} and {bigger}.',
-    'The water blob is {bigger} than the water around it, so it {rises}.',
+    'The water blob is {warmer} and bigger than the water around it, so it {rises}.',
     'When the water blob reaches the top, it gets {cooler} and {smaller}.',
-    'The water blob sinks because it is {smaller} than the water around it.'
+    'The water blob is {cooler} and smaller than the water around it, so it {sinks}.'
   ]
   const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
   // 每一步各自有「顯示答案」；按句子本身會讓動畫停在那一步
